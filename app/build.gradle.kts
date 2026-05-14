@@ -6,7 +6,7 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.hilt)
-    id("kotlin-kapt")
+    id("org.jetbrains.kotlin.kapt")
 }
 
 // Build metadata
