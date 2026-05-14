@@ -1,21 +1,20 @@
 import java.io.FileInputStream
-import java.util.Properties
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.hilt)
-    id("com.google.devtools.ksp") version "2.0.21-1.0.28" apply false
     id("kotlin-kapt")
 }
 
-// Versioning
-val buildNumber = System.getenv("BUILD_NUMBER")?.toIntOrNull() ?: 1
-val gitHash = System.getenv("GIT_HASH") ?: "local"
-val buildDate = SimpleDateFormat("yyyy.MM.dd").format(Date())
+// Build metadata
+val buildNumber = (System.getenv("BUILD_NUMBER") ?: project.findProperty("BUILD_NUMBER") ?: "1").toString().toIntOrNull() ?: 1
+val gitHash = (System.getenv("GIT_HASH") ?: project.findProperty("GIT_HASH") ?: "local").toString()
+val buildDate: String = SimpleDateFormat("yyyy.MM.dd").format(Date())
 
-// Signing config
+// Signing
 val keystorePropertiesFile = rootProject.file("signing.properties")
 val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
@@ -35,11 +34,10 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField("String", "BUILD_DATE", "\"${buildDate}\"")
-        buildConfigField("String", "GIT_HASH", "\"${gitHash}\"")
+        buildConfigField("String", "BUILD_DATE", "\"$buildDate\"")
+        buildConfigField("String", "GIT_HASH", "\"$gitHash\"")
         buildConfigField("int", "BUILD_NUMBER", "$buildNumber")
 
-        // Room schema export
         javaCompileOptions {
             annotationProcessorOptions {
                 arguments["room.schemaLocation"] = "$projectDir/schemas"
@@ -50,12 +48,12 @@ android {
 
     signingConfigs {
         create("release") {
-            if (System.getenv("KEYSTORE_BASE64") != null) {
-                // CI environment - keystore decoded from base64 secret
+            val ksBase64 = System.getenv("KEYSTORE_BASE64")
+            if (ksBase64 != null) {
                 storeFile = file("${rootProject.buildDir}/keystore.jks")
-                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: keystoreProperties["storePassword"]?.toString()
-                keyAlias = System.getenv("KEY_ALIAS") ?: keystoreProperties["keyAlias"]?.toString()
-                keyPassword = System.getenv("KEY_PASSWORD") ?: keystoreProperties["keyPassword"]?.toString()
+                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "defaultryoustream"
+                keyAlias = System.getenv("KEY_ALIAS") ?: "ryoustream"
+                keyPassword = System.getenv("KEY_PASSWORD") ?: "defaultryoustream"
             } else if (keystorePropertiesFile.exists()) {
                 storeFile = file(keystoreProperties["storeFile"]?.toString() ?: "keystore.jks")
                 storePassword = keystoreProperties["storePassword"]?.toString()
@@ -69,11 +67,9 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-            if (System.getenv("KEYSTORE_BASE64") != null || keystorePropertiesFile.exists()) {
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            val ksBase64 = System.getenv("KEYSTORE_BASE64")
+            if (ksBase64 != null || keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
             }
         }
@@ -111,7 +107,6 @@ android {
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.3")
 
-    // Core
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -122,26 +117,21 @@ dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.viewpager2)
 
-    // Lifecycle
     implementation(libs.lifecycle.viewmodel)
     implementation(libs.lifecycle.livedata)
     implementation(libs.lifecycle.runtime)
     implementation(libs.lifecycle.service)
 
-    // Navigation
     implementation(libs.navigation.fragment)
     implementation(libs.navigation.ui)
 
-    // Room
     implementation(libs.room.runtime)
     implementation(libs.room.guava)
     annotationProcessor(libs.room.compiler)
 
-    // Hilt
     implementation(libs.hilt.android)
     annotationProcessor(libs.hilt.compiler)
 
-    // Media3 (ExoPlayer)
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.exoplayer.hls)
     implementation(libs.media3.exoplayer.dash)
@@ -151,26 +141,15 @@ dependencies {
     implementation(libs.media3.common)
     implementation(libs.media3.datasource.okhttp)
 
-    // Network
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
 
-    // Image Loading
     implementation(libs.glide)
     annotationProcessor(libs.glide.compiler)
 
-    // JSON
     implementation(libs.gson)
-
-    // WorkManager
     implementation(libs.workmanager)
-
-    // Preferences
     implementation(libs.preference)
-
-    // Media Cast
     implementation(libs.mediarouter)
-
-    // Guava
     implementation(libs.guava)
 }
