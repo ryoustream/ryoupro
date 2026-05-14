@@ -14,24 +14,29 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java 21
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
-          cache: gradle
 
-      - name: Install Gradle
+      - name: Install Gradle 8.7
         run: |
           wget https://services.gradle.org/distributions/gradle-8.7-bin.zip
-          unzip gradle-8.7-bin.zip
+          unzip -q gradle-8.7-bin.zip
           echo "$PWD/gradle-8.7/bin" >> $GITHUB_PATH
 
-      - name: Regenerate Wrapper
+      - name: Remove Broken Wrapper
+        run: |
+          rm -rf gradle/wrapper
+          rm -f gradlew
+          rm -f gradlew.bat
+
+      - name: Generate New Wrapper
         run: |
           gradle wrapper --gradle-version 8.7
 
-      - name: Permission
+      - name: Grant Permission
         run: chmod +x gradlew
 
       - name: Build APK
