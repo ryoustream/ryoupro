@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ryou Player</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_videos">Videos</string>
+    <string name="nav_folders">Folders</string>
+    <string name="nav_stream">Stream</string>
+
+    <!-- Player -->
+    <string name="play_pause">Play/Pause</string>
+    <string name="back">Back</string>
+    <string name="rotate">Rotate</string>
+    <string name="pip">Picture in Picture</string>
+    <string name="lock">Lock controls</string>
+    <string name="settings">Settings</string>
+
+    <!-- Library -->
+    <string name="search_videos">Search videos…</string>
+    <string name="no_media_found">No media found</string>
+    <string name="no_media_hint">Add videos to your device storage\nand pull down to refresh</string>
+    <string name="recent">Continue Watching</string>
+
+    <!-- Network stream -->
+    <string name="network_stream">Network Stream</string>
+    <string name="stream_url_hint">Enter stream URL (HLS, RTSP, HTTP…)</string>
+    <string name="play_stream">Play Stream</string>
+    <string name="stream_history">Recent Streams</string>
+    <string name="no_stream_history">No stream history yet</string>
+    <string name="delete_stream">Delete Stream</string>
+    <string name="delete_stream_confirm">Remove \"%s\" from history?</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
+    <string name="error_url_empty">Please enter a URL</string>
+
+    <!-- Permissions -->
+    <string name="permission_required_title">Permission Required</string>
+    <string name="permission_required_message">Ryou Player needs storage access to find and play your media files.</string>
+    <string name="grant">Grant</string>
+
+    <!-- Notifications -->
+    <string name="channel_playback_name">Media Playback</string>
+    <string name="channel_playback_desc">Controls for media playback</string>
+    <string name="channel_scanner_name">Media Scanner</string>
+    <string name="channel_scanner_desc">Background media scanning progress</string>
+
+    <!-- Settings -->
+    <string name="pref_theme_title">Theme</string>
+    <string name="pref_theme_system">Follow system</string>
+    <string name="pref_theme_light">Light</string>
+    <string name="pref_theme_dark">Dark</string>
+    <string name="pref_amoled_title">AMOLED dark mode</string>
+    <string name="pref_amoled_summary">Pure black background in dark mode</string>
+    <string name="pref_decoder_title">Video decoder</string>
+    <string name="pref_decoder_auto">Auto (recommended)</string>
+    <string name="pref_decoder_hardware">Hardware only</string>
+    <string name="pref_decoder_software">Software only</string>
+    <string name="pref_subtitle_size_title">Subtitle size</string>
+    <string name="pref_gesture_title">Gesture controls</string>
+    <string name="pref_gesture_summary">Swipe to control brightness and volume</string>
+    <string name="pref_cache_size_title">Cache size</string>
+    <string name="pref_clear_cache_title">Clear cache</string>
+    <string name="pref_version_title">Version</string>
+    <string name="pref_build_info_title">Build info</string>
+    <string name="cache_cleared">Cache cleared</string>
+
+    <!-- About -->
+    <string name="about">About</string>
+</resources>

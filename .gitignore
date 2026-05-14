@@ -1,0 +1,36 @@
+## Android / Gradle
+.gradle/
+local.properties
+/build/
+app/build/
+*.apk
+*.aab
+*.ap_
+
+## Keystore - NEVER commit real keystores
+*.jks
+*.keystore
+signing.properties
+
+## IDE
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+
+## NDK / CMake
+.cxx/
+*.so
+
+## Test results
+/test-results/
+/jacoco/
+
+## Lint
+lint/intermediates/
+lint/generated/
+lint/outputs/
+lint/tmp/
+
+## Schemas (optional — keep for migration tracking)
+# app/schemas/

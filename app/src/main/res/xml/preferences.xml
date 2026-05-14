@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <!-- Playback -->
+    <PreferenceCategory android:title="Playback">
+
+        <ListPreference
+            android:key="pref_decoder"
+            android:title="@string/pref_decoder_title"
+            android:entries="@array/decoder_entries"
+            android:entryValues="@array/decoder_values"
+            android:defaultValue="auto"
+            app:useSimpleSummaryProvider="true" />
+
+        <SwitchPreferenceCompat
+            android:key="pref_resume_playback"
+            android:title="Resume playback"
+            android:summary="Continue from where you left off"
+            android:defaultValue="true" />
+
+        <SwitchPreferenceCompat
+            android:key="pref_gesture_controls"
+            android:title="@string/pref_gesture_title"
+            android:summary="@string/pref_gesture_summary"
+            android:defaultValue="true" />
+
+        <ListPreference
+            android:key="pref_default_speed"
+            android:title="Default playback speed"
+            android:entries="@array/speed_entries"
+            android:entryValues="@array/speed_values"
+            android:defaultValue="1.0"
+            app:useSimpleSummaryProvider="true" />
+
+    </PreferenceCategory>
+
+    <!-- Subtitles -->
+    <PreferenceCategory android:title="Subtitles">
+
+        <SeekBarPreference
+            android:key="pref_subtitle_size"
+            android:title="@string/pref_subtitle_size_title"
+            android:max="200"
+            android:defaultValue="100" />
+
+        <SwitchPreferenceCompat
+            android:key="pref_subtitle_shadow"
+            android:title="Subtitle shadow"
+            android:defaultValue="true" />
+
+        <SwitchPreferenceCompat
+            android:key="pref_subtitle_background"
+            android:title="Subtitle background"
+            android:defaultValue="false" />
+
+    </PreferenceCategory>
+
+    <!-- Appearance -->
+    <PreferenceCategory android:title="Appearance">
+
+        <ListPreference
+            android:key="pref_theme"
+            android:title="@string/pref_theme_title"
+            android:entries="@array/theme_entries"
+            android:entryValues="@array/theme_values"
+            android:defaultValue="system"
+            app:useSimpleSummaryProvider="true" />
+
+        <SwitchPreferenceCompat
+            android:key="pref_amoled"
+            android:title="@string/pref_amoled_title"
+            android:summary="@string/pref_amoled_summary"
+            android:defaultValue="false" />
+
+    </PreferenceCategory>
+
+    <!-- Network -->
+    <PreferenceCategory android:title="Network">
+
+        <SeekBarPreference
+            android:key="pref_buffer_size"
+            android:title="Network buffer size (MB)"
+            android:max="128"
+            android:defaultValue="32" />
+
+        <SwitchPreferenceCompat
+            android:key="pref_auto_reconnect"
+            android:title="Auto reconnect streams"
+            android:defaultValue="true" />
+
+    </PreferenceCategory>
+
+    <!-- Storage -->
+    <PreferenceCategory android:title="Storage">
+
+        <SeekBarPreference
+            android:key="pref_cache_size"
+            android:title="@string/pref_cache_size_title"
+            android:max="1024"
+            android:defaultValue="256" />
+
+        <Preference
+            android:key="pref_clear_cache"
+            android:title="@string/pref_clear_cache_title" />
+
+    </PreferenceCategory>
+
+    <!-- About -->
+    <PreferenceCategory android:title="About">
+
+        <Preference
+            android:key="pref_version"
+            android:title="@string/pref_version_title"
+            android:enabled="false" />
+
+        <Preference
+            android:key="pref_build_info"
+            android:title="@string/pref_build_info_title"
+            android:enabled="false" />
+
+    </PreferenceCategory>
+
+</PreferenceScreen>

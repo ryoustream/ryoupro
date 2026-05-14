@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.RyouPlayer" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Primary brand color -->
+        <item name="colorPrimary">@color/ryou_primary</item>
+        <item name="colorPrimaryContainer">@color/ryou_primary_container</item>
+        <item name="colorSecondary">@color/ryou_secondary</item>
+        <item name="colorTertiary">@color/ryou_tertiary</item>
+        <item name="colorError">@color/ryou_error</item>
+        <item name="android:colorBackground">@color/ryou_background</item>
+
+        <!-- Status bar / navigation bar -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+
+        <!-- Edge to edge -->
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+
+        <!-- Typography -->
+        <item name="textAppearanceTitleLarge">@style/TextAppearance.RyouPlayer.TitleLarge</item>
+    </style>
+
+    <!-- Player theme - full immersive -->
+    <style name="Theme.RyouPlayer.Player" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:colorBackground">@color/black</item>
+    </style>
+
+    <!-- Typography overrides -->
+    <style name="TextAppearance.RyouPlayer.TitleLarge"
+        parent="TextAppearance.Material3.TitleLarge">
+        <item name="fontFamily">sans-serif-medium</item>
+    </style>
+
+    <!-- Bottom navigation label behavior -->
+    <style name="Widget.RyouPlayer.BottomNavigation"
+        parent="Widget.Material3.BottomNavigationView">
+        <item name="labelVisibilityMode">labeled</item>
+    </style>
+
+</resources>

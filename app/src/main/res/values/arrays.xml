@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Decoder options -->
+    <string-array name="decoder_entries">
+        <item>Auto (Recommended)</item>
+        <item>Hardware only</item>
+        <item>Software only</item>
+    </string-array>
+    <string-array name="decoder_values">
+        <item>auto</item>
+        <item>hardware</item>
+        <item>software</item>
+    </string-array>
+
+    <!-- Speed options -->
+    <string-array name="speed_entries">
+        <item>0.25×</item>
+        <item>0.5×</item>
+        <item>0.75×</item>
+        <item>1.0× (Normal)</item>
+        <item>1.25×</item>
+        <item>1.5×</item>
+        <item>1.75×</item>
+        <item>2.0×</item>
+    </string-array>
+    <string-array name="speed_values">
+        <item>0.25</item>
+        <item>0.5</item>
+        <item>0.75</item>
+        <item>1.0</item>
+        <item>1.25</item>
+        <item>1.5</item>
+        <item>1.75</item>
+        <item>2.0</item>
+    </string-array>
+
+    <!-- Theme options -->
+    <string-array name="theme_entries">
+        <item>Follow system</item>
+        <item>Light</item>
+        <item>Dark</item>
+    </string-array>
+    <string-array name="theme_values">
+        <item>system</item>
+        <item>light</item>
+        <item>dark</item>
+    </string-array>
+
+</resources>

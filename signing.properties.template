@@ -1,0 +1,10 @@
+# Signing configuration for local builds
+# For CI/CD, use GitHub Secrets instead (see .github/workflows/build.yml)
+#
+# IMPORTANT: Do NOT commit this file with real credentials.
+# Add signing.properties to .gitignore if you fill in real values.
+
+storeFile=keystore.jks
+storePassword=defaultryoustream
+keyAlias=ryoustream
+keyPassword=defaultryoustream

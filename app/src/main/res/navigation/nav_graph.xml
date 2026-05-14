@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/nav_home">
+
+    <fragment
+        android:id="@+id/nav_home"
+        android:name="com.ryoustream.player.ui.home.HomeFragment"
+        android:label="@string/nav_home" />
+
+    <fragment
+        android:id="@+id/nav_videos"
+        android:name="com.ryoustream.player.ui.library.LibraryFragment"
+        android:label="@string/nav_videos" />
+
+    <fragment
+        android:id="@+id/nav_folders"
+        android:name="com.ryoustream.player.ui.library.LibraryFragment"
+        android:label="@string/nav_folders" />
+
+    <fragment
+        android:id="@+id/nav_stream"
+        android:name="com.ryoustream.player.ui.home.HomeFragment"
+        android:label="@string/nav_stream" />
+
+</navigation>

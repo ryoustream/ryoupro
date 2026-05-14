@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Play button triangle centered -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M36,28l0,52l40,-26z" />
+    <!-- Accent ring -->
+    <path
+        android:fillColor="#D0BCFF"
+        android:strokeColor="#D0BCFF"
+        android:strokeWidth="2"
+        android:pathData="M54,18 A36,36 0 1,1 53.9,18 Z"
+        android:fillAlpha="0.15" />
+</vector>
