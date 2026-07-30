@@ -1,0 +1,34 @@
+# TEMPLATE PATCH - not a verified diff against a specific mpv-android commit.
+#
+# mpv-android's JNI glue file and exact line numbers vary by fork/version -
+# this shows the SHAPE of the two additions needed (one native method that
+# hands back the raw handle mpv-android's own JNI layer already holds
+# internally, e.g. as a static jlong/mpv_handle*). Locate the equivalent
+# spot in whichever fork you're building and adapt accordingly; do not
+# `git apply` this file as-is.
+
+--- a/app/src/main/java/is/xyz/mpv/MPVLib.java
++++ b/app/src/main/java/is/xyz/mpv/MPVLib.java
+@@ public class MPVLib {
+     public static native void create(Context appctx);
+     public static native void init();
+     public static native void destroy();
++
++    /**
++     * Returns the raw mpv_handle* this instance wraps, as a jlong, so host
++     * apps can call libmpv C-API functions this Java surface doesn't wrap
++     * (e.g. mpv_stream_cb_add_ro). Only valid between init() and destroy().
++     */
++    public static native long getRawHandle();
+
+--- a/app/src/main/jni/mpv_jni.c   (filename/path varies by fork)
++++ b/app/src/main/jni/mpv_jni.c
+@@ static mpv_handle *mpv = NULL; // already exists in every mpv-android fork
+                                  // examined for this patch template - the
+                                  // JNI layer keeps its own mpv_handle in a
+                                  // static, it's just never handed back out.
+
++JNIEXPORT jlong JNICALL
++Java_is_xyz_mpv_MPVLib_getRawHandle(JNIEnv *env, jclass clazz) {
++    return (jlong)(intptr_t)mpv;
++}
