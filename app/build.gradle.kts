@@ -19,7 +19,7 @@ val splitApks = !project.hasProperty("noSplits") && !gradle.startParameter.taskN
 }
 
 android {
-    namespace = "com.devson.nvplayer"
+    namespace = "com.rynime.nvplayer"
     compileSdk {
         version = release(36)
     }
@@ -30,7 +30,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.devson.nvplayer"
+        applicationId = "com.rynime.nvplayer"
         minSdk = 26
         targetSdk = 36
         versionCode = 114

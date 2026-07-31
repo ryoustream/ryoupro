@@ -21,7 +21,7 @@ extern "C" {
 // Returns an opaque native handle (as jlong) or 0 on failure.
 // Kotlin side owns the handle's lifetime and must call nativeRelease exactly once.
 JNIEXPORT jlong JNICALL
-Java_com_devson_nvplayer_rife_RifeInterpolator_nativeInit(
+Java_com_rynime_nvplayer_rife_RifeInterpolator_nativeInit(
         JNIEnv* env, jclass /*clazz*/,
         jstring modelDir, jint gpuId, jboolean ttaSpatial, jboolean ttaTemporal,
         jboolean uhdMode, jint numThreads) {
@@ -46,7 +46,7 @@ Java_com_devson_nvplayer_rife_RifeInterpolator_nativeInit(
 // ByteBuffer.allocateDirect), each sized width*height*3/2 bytes (NV12).
 // Returns 0 on success, matching RifeEngine's error codes otherwise.
 JNIEXPORT jint JNICALL
-Java_com_devson_nvplayer_rife_RifeInterpolator_nativeInterpolate(
+Java_com_rynime_nvplayer_rife_RifeInterpolator_nativeInterpolate(
         JNIEnv* env, jobject /*thiz*/, jlong handle,
         jobject frameA, jobject frameB, jint width, jint height,
         jfloat timestep, jobject outFrame) {
@@ -64,7 +64,7 @@ Java_com_devson_nvplayer_rife_RifeInterpolator_nativeInterpolate(
 }
 
 JNIEXPORT void JNICALL
-Java_com_devson_nvplayer_rife_RifeInterpolator_nativeRelease(
+Java_com_rynime_nvplayer_rife_RifeInterpolator_nativeRelease(
         JNIEnv* /*env*/, jclass /*clazz*/, jlong handle) {
     if (handle == 0) return;
     auto* engine = reinterpret_cast<RifeEngine*>(handle);
@@ -79,7 +79,7 @@ Java_com_devson_nvplayer_rife_RifeInterpolator_nativeRelease(
 int rife_register_mpv_stream_source(void* mpvHandle);
 
 JNIEXPORT jint JNICALL
-Java_com_devson_nvplayer_rife_realtime_RifeFrameSource_nativeRegisterStreamSource(
+Java_com_rynime_nvplayer_rife_realtime_RifeFrameSource_nativeRegisterStreamSource(
         JNIEnv* /*env*/, jobject /*thiz*/, jlong mpvHandle, jstring /*modelFolder*/, jint /*scaleFactor*/) {
     return rife_register_mpv_stream_source(reinterpret_cast<void*>(mpvHandle));
 }

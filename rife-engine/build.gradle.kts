@@ -7,7 +7,7 @@ plugins {
 // Per AGENTS.md, Compose is exclusive to UI code in :app. This module is a
 // plain Kotlin + JNI engine so it stays testable/reusable independent of UI.
 android {
-    namespace = "com.devson.nvplayer.rife"
+    namespace = "com.rynime.nvplayer.rife"
     compileSdk {
         version = release(36)
     }
