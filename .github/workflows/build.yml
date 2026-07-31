@@ -32,6 +32,16 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Download prebuilt mpvlib.aar
+        # app/libs/mpvlib.aar is deliberately gitignored (see
+        # app/libs/Donwlod-Mpvlibs.md) - too large to keep in the repo.
+        # Mirrors that file's manual instructions as an automated CI step.
+        run: |
+          mkdir -p app/libs
+          curl -fsSL -o app/libs/mpvlib.aar \
+            "https://github.com/SunnyVishnu3/mpvlibAndroid/releases/latest/download/mpvlib.aar"
+          ls -la app/libs/mpvlib.aar
+
       - name: Build debug APK
         id: build
         run: |
