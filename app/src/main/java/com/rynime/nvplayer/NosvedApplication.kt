@@ -17,6 +17,11 @@ import okio.Path.Companion.toOkioPath
 
 class NosvedApplication : Application(), SingletonImageLoader.Factory {
 
+    override fun onCreate() {
+        super.onCreate()
+        com.rynime.nvplayer.util.CrashLogger.install(this)
+    }
+
     override fun newImageLoader(context: PlatformContext): ImageLoader {
         val cacheDir = cacheDir.resolve("video_thumbnails_cache")
         val freeBytes = cacheDir.parentFile?.freeSpace ?: (200L * 1024 * 1024)
