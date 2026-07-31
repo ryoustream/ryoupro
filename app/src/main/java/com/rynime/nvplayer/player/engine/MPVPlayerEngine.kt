@@ -90,6 +90,16 @@ class MPVPlayerEngine(private val context: Context) : PlayerEngine, MPVLib.Event
             }
 
             Log.d("MPVPlayerEngine", "Initializing MPVLib instance")
+            // MPVLib is a native-method wrapper backed by libs bundled inside
+            // mpvlib.aar. Newer AAR builds (confirmed via bytecode inspection
+            // of MPVLib.class) require this explicit call - it resolves the
+            // device's optimal ABI tier (via AbiDetector, including ARMv9/SVE2
+            // detection) and loads the matching native libraries - before any
+            // native method like create() can resolve. Without it, create()
+            // throws UnsatisfiedLinkError: "No implementation found... is the
+            // library loaded, e.g. System.loadLibrary?" - which is exactly
+            // what was happening here.
+            MPVLib.loadLibraries(context.applicationContext)
             MPVLib.create(context.applicationContext)
 
             // Configure standard MPV playback options for modern android
