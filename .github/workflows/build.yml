@@ -33,13 +33,23 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build debug APK
-        # rife-engine builds in stub mode here (RIFE_ENGINE_HAS_NCNN=0) since
-        # third_party/ncnn + rife-ncnn-vulkan aren't fetched in CI - see
-        # rife-engine/src/main/cpp/README_NATIVE_SETUP.md. This still
-        # verifies the whole app + module wiring compiles and an installable
-        # APK comes out the other end, which is the baseline this job exists
-        # to catch.
-        run: ./gradlew assembleDebug --stacktrace
+        id: build
+        run: |
+          set -o pipefail
+          ./gradlew assembleDebug --stacktrace 2>&1 | tee gradle_output.log
+        continue-on-error: true
+
+      - name: Surface failure details as annotations
+        if: steps.build.outcome == 'failure'
+        run: |
+          echo "### Gradle build failed - key lines:" >> "$GITHUB_STEP_SUMMARY"
+          grep -E "error:|Error:|FAILED|What went wrong|Caused by:|^e: " gradle_output.log | tail -50 > errors.txt || true
+          cat errors.txt >> "$GITHUB_STEP_SUMMARY"
+          while IFS= read -r line; do
+            esc=$(printf '%s' "$line" | sed 's/%/%25/g' | tr -d '\r')
+            echo "::error::${esc}"
+          done < errors.txt
+          exit 1
 
       - name: Upload debug APK
         if: success()
