@@ -211,7 +211,7 @@ private fun AboutBrandCard(
             }
 
             Text(
-                text = "Nosved Player",
+                text = "Nokvez Play",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -393,7 +393,7 @@ private fun AboutLinksCard(context: Context) {
             title = "GitHub Repository",
             subtitle = "Browse source code and contribute",
             onClick = {
-                openUrl(context, "https://github.com/DevSon1024/Nosved-Player")
+                openUrl(context, "https://github.com/ryoustream/ryoupro")
             }
         )
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(start = 44.dp))
@@ -402,7 +402,7 @@ private fun AboutLinksCard(context: Context) {
             title = "Latest Release",
             subtitle = "Check out the latest release notes and updates",
             onClick = {
-                openUrl(context, "https://github.com/DevSon1024/Nosved-Player/releases")
+                openUrl(context, "https://github.com/ryoustream/ryoupro/releases")
             }
         )
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(start = 44.dp))
@@ -411,7 +411,7 @@ private fun AboutLinksCard(context: Context) {
             title = "Report an Issue",
             subtitle = "Found a bug? Help us improve by listing it",
             onClick = {
-                openUrl(context, "https://github.com/DevSon1024/Nosved-Player/issues/new")
+                openUrl(context, "https://github.com/ryoustream/ryoupro/issues/new")
             }
         )
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(start = 44.dp))

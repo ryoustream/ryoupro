@@ -95,7 +95,7 @@ fun PrivacyPolicyScreen(onBack: () -> Unit) {
                             PolicyPointRow(
                                 icon = Icons.Default.Lock,
                                 title = "Zero Personal Data Collection",
-                                description = "Nosved Player does not collect, record, transmit, or share any personal information, usage stats, or telemetry."
+                                description = "Nokvez Play does not collect, record, transmit, or share any personal information, usage stats, or telemetry."
                             )
                             PolicyPointSeparator()
                             PolicyPointRow(
@@ -163,7 +163,7 @@ fun PrivacyPolicyScreen(onBack: () -> Unit) {
 
                         // Footer
                         Text(
-                            text = "Nosved Player\nCommitted to Open-Source and Privacy\nCreated by DevSon",
+                            text = "Nokvez Play\nCommitted to Open-Source and Privacy\nCreated by DevSon",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -225,7 +225,7 @@ private fun PrivacyHeroCard() {
             )
 
             Text(
-                text = "Nosved Player is built from the ground up to respect your privacy. Local video operations run entirely offline, while optional online streaming connects directly to your requested media sources with zero tracking.",
+                text = "Nokvez Play is built from the ground up to respect your privacy. Local video operations run entirely offline, while optional online streaming connects directly to your requested media sources with zero tracking.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,

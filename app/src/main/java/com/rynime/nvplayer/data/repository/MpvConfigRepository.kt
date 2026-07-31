@@ -21,7 +21,7 @@ object MpvConfigRepository {
     private const val FILE_NAME = "mpv.conf"
 
     private val DEFAULT_CONFIG = """
-        # Nosved Player Custom MPV Configuration (mpv.conf)
+        # Nokvez Play Custom MPV Configuration (mpv.conf)
         # You can add/modify any standard mpv options here.
         # Lines starting with # are comments.
 

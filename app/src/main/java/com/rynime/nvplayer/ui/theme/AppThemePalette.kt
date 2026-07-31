@@ -27,7 +27,7 @@ enum class AppThemePalette(
         darkSecondary  = Color(0xFFFFE082)
     ),
     BLUE(
-        displayName    = "Nosved Blue",
+        displayName    = "Nokvez Blue",
         lightPrimary   = Color(0xFF1A73E8),
         darkPrimary    = Color(0xFFAEC6FF),
         lightSecondary = Color(0xFF3949AB),
@@ -507,7 +507,7 @@ enum class AppThemePalette(
 object AppThemePaletteHelper {
     /**
      * Safely parse a stored string key back to the enum.
-     * Defaults to BLUE (Nosved Blue) - the app's factory default palette.
+     * Defaults to BLUE (Nokvez Blue) - the app's factory default palette.
      */
     fun fromKey(key: String?): AppThemePalette =
         AppThemePalette.entries.firstOrNull { it.name == key } ?: AppThemePalette.BLUE

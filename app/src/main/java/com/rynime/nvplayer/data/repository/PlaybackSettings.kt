@@ -77,7 +77,7 @@ data class PlaybackSettings(
     val customPlaybackSpeed: Float = 1.0f,
     val tapAndHoldSpeed: Float = 2.0f,
     val doubleTapSeekDuration: Long = 10000L,
-    val screenshotLocation: String = "Pictures/Nosved Player/Screenshot",
+    val screenshotLocation: String = "Pictures/Nokvez Play/Screenshot",
     val blacklistedFolders: Set<String> = emptySet(),
     val whitelistedFolders: Set<String> = emptySet(),
     val folderFilterMode: FolderFilterMode = FolderFilterMode.NONE,

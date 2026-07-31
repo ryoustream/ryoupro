@@ -77,13 +77,13 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /**
-     * true = use Material You (wallpaper-based) colours, false = Nosved custom palette.
+     * true = use Material You (wallpaper-based) colours, false = Nokvez custom palette.
      * Only takes visual effect on API 31+.
      */
     val dynamicColor: StateFlow<Boolean> = settingsRepo.dynamicColorFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
-    /** The currently selected built-in colour palette (defaults to BLUE / Nosved Blue). */
+    /** The currently selected built-in colour palette (defaults to BLUE / Nokvez Blue). */
     val selectedPalette: StateFlow<AppThemePalette> = settingsRepo.selectedPaletteFlow
         .map { key -> AppThemePaletteHelper.fromKey(key) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppThemePalette.BLUE)
@@ -212,7 +212,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 customPlaybackSpeed = 1.0f,
                 tapAndHoldSpeed = 2.0f,
                 doubleTapSeekDuration = 10000L,
-                screenshotLocation = "Pictures/Nosved Player/Screenshot",
+                screenshotLocation = "Pictures/Nokvez Play/Screenshot",
                 keepAwakeAlways = false,
                 isBottomLayoutEnabled = false,
                 showControlGradients = true,

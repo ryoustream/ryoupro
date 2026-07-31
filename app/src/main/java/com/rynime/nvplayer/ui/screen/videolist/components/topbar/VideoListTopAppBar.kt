@@ -160,7 +160,7 @@ fun VideoListTopAppBar(
                                 modifier = Modifier.clickable { storageMenuExpanded = true }
                             ) {
                                 Text(
-                                    text = titleText ?: selectedStorage?.name ?: "Nosved Player",
+                                    text = titleText ?: selectedStorage?.name ?: "Nokvez Play",
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
@@ -198,7 +198,7 @@ fun VideoListTopAppBar(
                         }
                     } else {
                         Text(
-                            titleText ?: "Nosved Player",
+                            titleText ?: "Nokvez Play",
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis

@@ -8,7 +8,7 @@ import androidx.core.app.NotificationCompat
 import androidx.work.ForegroundInfo
 
 /**
- * Nosved-Player doesn't have a shared notification-channel helper yet (see
+ * Nokvez Play doesn't have a shared notification-channel helper yet (see
  * MediaPlaybackService.kt for the closest existing precedent, playback's own
  * channel) - this creates a dedicated channel for export jobs rather than
  * reusing playback's, since a long export running while nothing is playing

@@ -224,8 +224,8 @@ class PlaybackSettingsRepository(context: Context) {
             doubleTapSeekDuration = prefs.getLong("double_tap_seek_duration", 10000L),
             screenshotLocation = prefs.getString(
                 "screenshot_location",
-                "Pictures/Nosved Player/Screenshot"
-            ) ?: "Pictures/Nosved Player/Screenshot",
+                "Pictures/Nokvez Play/Screenshot"
+            ) ?: "Pictures/Nokvez Play/Screenshot",
             blacklistedFolders = prefs.getStringSet("blacklisted_folders", emptySet())
                 ?: emptySet(),
             whitelistedFolders = prefs.getStringSet("whitelisted_folders", emptySet())

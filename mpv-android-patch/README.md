@@ -2,7 +2,7 @@
 
 ## Why this exists
 
-Nosved-Player consumes a **prebuilt** `mpvlib.aar`
+Nokvez Play consumes a **prebuilt** `mpvlib.aar`
 (`app/libs/Donwlod-Mpvlibs.md` points at
 `github.com/SunnyVishnu3/mpvlibAndroid/releases`, itself built from
 `mpv-android/mpv-android`'s JNI bridge). That AAR's `is.xyz.mpv.MPVLib`
@@ -52,9 +52,9 @@ this if you specifically want Mode B.
 
 ## License note
 
-`mpv-android` is GPLv2+ with LGPLv2.1+ parts. Nosved-Player already links
+`mpv-android` is GPLv2+ with LGPLv2.1+ parts. Nokvez Play already links
 against a prebuilt build of it today (this predates this patch, not
 introduced by it) - if you weren't already treating the app as subject to
 that license's linking terms, now is a good time to confirm with whoever
-maintains Nosved-Player's licensing posture before shipping a build that
+maintains Nokvez Play's licensing posture before shipping a build that
 includes a self-compiled variant.

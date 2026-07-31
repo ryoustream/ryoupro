@@ -145,7 +145,7 @@ fun YtdlpSettingsScreen(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Due to API 29+ security restrictions, binary execution from the data folder is blocked. Nosved Player bypasses this by wrapping Python in a shared JNI library (`libytdl.so`). Click Compile to link and build the environment.",
+                        text = "Due to API 29+ security restrictions, binary execution from the data folder is blocked. Nokvez Play bypasses this by wrapping Python in a shared JNI library (`libytdl.so`). Click Compile to link and build the environment.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

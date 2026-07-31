@@ -1,6 +1,6 @@
 # RIFE Smooth Motion integration - status & how to build
 
-This patch adds a `:rife-engine` module to Nosved-Player implementing the
+This patch adds a `:rife-engine` module to Nokvez Play implementing the
 phased plan discussed for bringing SVP-style AI frame interpolation to this
 player. It is a **scaffold**, not a finished feature: everything that could
 be written and reasoned about without an Android device, GPU, and the actual
@@ -66,7 +66,7 @@ foreground notification needs on API 34+ (targetSdk=36 enforces this).
 ## Licensing / attribution
 
 Everything pulled in is MIT or BSD-3-Clause and compatible with
-Nosved-Player's own MIT license:
+Nokvez Play's own MIT license:
 
 - RIFE (hzwer/Practical-RIFE) - MIT
 - rife-ncnn-vulkan (nihui) - MIT

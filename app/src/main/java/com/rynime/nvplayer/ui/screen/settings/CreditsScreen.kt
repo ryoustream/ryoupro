@@ -158,7 +158,7 @@ private fun CreditsHeroCard() {
             )
 
             Text(
-                text = "Nosved Player is proudly built on top of amazing open source technologies. We are incredibly grateful to the global developer community for making these libraries freely available.",
+                text = "Nokvez Play is proudly built on top of amazing open source technologies. We are incredibly grateful to the global developer community for making these libraries freely available.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
