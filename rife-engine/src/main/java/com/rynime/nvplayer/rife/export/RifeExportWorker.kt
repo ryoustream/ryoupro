@@ -62,6 +62,7 @@ class RifeExportWorker(appContext: android.content.Context, params: WorkerParame
         val videoTrackIndex = findTrackIndex(extractor, "video/")
             ?: throw IllegalStateException("No video track found in $inputUri")
         val audioTrackIndex = findTrackIndex(extractor, "audio/")
+        val audioFormat = audioTrackIndex?.let { extractor.getTrackFormat(it) }
 
         val videoFormat = extractor.getTrackFormat(videoTrackIndex)
         val width = videoFormat.getInteger(MediaFormat.KEY_WIDTH)
@@ -95,6 +96,11 @@ class RifeExportWorker(appContext: android.content.Context, params: WorkerParame
         encoder.start()
 
         val muxer = MediaMuxer(outputPath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+        // MediaMuxer requires every addTrack() call to happen before the single
+        // start() call. Audio's format is known immediately from the source, so
+        // add it now - the video track gets added inside drainEncoder() once the
+        // encoder reports its output format, and THAT is what triggers start().
+        val audioMuxerTrack = audioFormat?.let { muxer.addTrack(it) }
 
         try {
             extractor.selectTrack(videoTrackIndex)
@@ -110,8 +116,8 @@ class RifeExportWorker(appContext: android.content.Context, params: WorkerParame
             )
             extractor.unselectTrack(videoTrackIndex)
 
-            if (audioTrackIndex != null) {
-                copyAudioTrackUnchanged(inputUri, audioTrackIndex, muxer)
+            if (audioTrackIndex != null && audioMuxerTrack != null) {
+                copyAudioTrackUnchanged(inputUri, audioTrackIndex, muxer, audioMuxerTrack)
             }
         } finally {
             interpolator.release()
@@ -262,20 +268,16 @@ class RifeExportWorker(appContext: android.content.Context, params: WorkerParame
         }
     }
 
-    private fun copyAudioTrackUnchanged(inputUri: android.net.Uri, audioTrackIndex: Int, muxer: MediaMuxer) {
+    private fun copyAudioTrackUnchanged(
+        inputUri: android.net.Uri, audioTrackIndex: Int, muxer: MediaMuxer, muxerAudioTrack: Int,
+    ) {
         val audioExtractor = MediaExtractor()
         audioExtractor.setDataSource(applicationContext, inputUri, null)
         audioExtractor.selectTrack(audioTrackIndex)
-        val audioFormat = audioExtractor.getTrackFormat(audioTrackIndex)
-        val muxerAudioTrack = muxer.addTrack(audioFormat)
-        // Muxer is already started at this point (video track triggers
-        // start() in drainEncoder) - adding a track after start() is invalid
-        // on stock Android MediaMuxer. This ordering gap is called out in
-        // RIFE_INTEGRATION_README.md's "known gaps" list: the fix is to
-        // addTrack() for BOTH video and audio before calling muxer.start()
-        // once, which means restructuring this method to run before the
-        // video pump rather than after it. Left as a known TODO rather than
-        // silently "fixed" with an unverified workaround.
+        // muxerAudioTrack was registered via muxer.addTrack() in runExport,
+        // before muxer.start() - fixed from an earlier version of this file
+        // that called addTrack() here too, after start() had already been
+        // triggered by the video track (MediaMuxer throws in that ordering).
         val buffer = ByteBuffer.allocate(1 shl 20)
         val bufferInfo = MediaCodec.BufferInfo()
         while (true) {

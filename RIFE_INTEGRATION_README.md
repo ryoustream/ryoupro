@@ -39,26 +39,29 @@ that genuinely depends on those is clearly marked below rather than faked.
 
 ## Known gaps to fix before this is production-quality
 
-1. **`RifeExportWorker.copyAudioTrackUnchanged`**: calls `muxer.addTrack()`
-   for audio *after* `muxer.start()` has already been triggered by the video
-   track in `drainEncoder`. Standard `MediaMuxer` requires **all** tracks to
-   be added before the single `start()` call. Fix: restructure so both video
-   and audio tracks are added before the first `muxer.start()` - flagged
-   in-code with a comment, not silently patched over with something unverified.
-2. **`RifeEngine::process()` signature** (C++): written against the v4.x
+1. **`RifeEngine::process()` signature** (C++): written against the v4.x
    `rife-ncnn-vulkan` API (adds a free `timestep` arg). Confirm this matches
    whatever tag `setup_native_deps.sh` actually pins before building.
-3. **`toNv12()` stride handling** (Kotlin, in `RifeExportWorker`): handles
+2. **`toNv12()` stride handling** (Kotlin, in `RifeExportWorker`): handles
    the common tightly-packed case and the `KEY_STRIDE`/`KEY_SLICE_HEIGHT`
    padded case, but hasn't been validated against every OEM decoder's
    quirks - a known messy corner of `MediaCodec` on Android in general.
-4. **Mode B decode loop** (`mpv_rife_stream_source.cpp`): the
+3. **Mode B decode loop** (`mpv_rife_stream_source.cpp`): the
    `AMediaExtractor`/`AMediaCodec` producer body is a placeholder
    (`gotFrame = false`) - real implementation is Fase 4a work once the
    mpv-android-patch prerequisite exists to test against.
-5. Seeking in Mode B is unimplemented (`cb_seek` returns -1). This mirrors a
+4. Seeking in Mode B is unimplemented (`cb_seek` returns -1). This mirrors a
    real limitation SVP itself has (brief "reinit" pause on seek), not a
    shortcut unique to this scaffold - but it still needs implementing.
+
+Fixed since the first version of this scaffold: the `MediaMuxer` audio-track
+was previously added *after* `muxer.start()` had already been triggered by
+the video track, which `MediaMuxer` rejects at runtime. `RifeExportWorker`
+now adds the audio track (its format is known upfront) before the video
+track/`start()` call, which happens once the encoder reports its output
+format. Also fixed: `AndroidManifest.xml` was missing the
+`FOREGROUND_SERVICE_DATA_SYNC` permission that `RifeExportWorker`'s
+foreground notification needs on API 34+ (targetSdk=36 enforces this).
 
 ## Licensing / attribution
 
