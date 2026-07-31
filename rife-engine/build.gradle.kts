@@ -25,7 +25,7 @@ android {
                 // ncnn fallback) still works on 32-bit devices.
                 abiFilters += listOf("arm64-v8a", "armeabi-v7a")
                 cppFlags += "-std=c++17"
-                arguments += listOf("-DANDROID_STL=c++_shared")
+                arguments += listOf("-DANDROID_STL=c++_static")
             }
         }
     }
