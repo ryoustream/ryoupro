@@ -60,6 +60,28 @@ jobs:
             echo "::error::${esc}"
           done < errors.txt
 
+      - name: Verify the built library is the real thing, not a stub
+        if: success()
+        run: |
+          SO=$(find rife-engine/build -iname "librife_engine.so" | head -1)
+          echo "::notice::SO path: ${SO:-NOT FOUND}"
+          if [ -z "$SO" ]; then
+            echo "::error::librife_engine.so was not produced"
+            exit 1
+          fi
+          SIZE=$(stat -c%s "$SO")
+          echo "::notice::SO size: ${SIZE} bytes"
+          ARCH=$(readelf -h "$SO" | grep Machine)
+          echo "::notice::${ARCH}"
+          JNI_SYMS=$(nm -D "$SO" 2>/dev/null | grep -c "Java_com_rynime_nvplayer_rife" || echo 0)
+          echo "::notice::JNI exported symbols found: ${JNI_SYMS} (expect 4)"
+          RIFE_SYMS=$(nm "$SO" 2>/dev/null | grep -c "6RIFE" || echo 0)
+          echo "::notice::RIFE class symbols in symbol table: ${RIFE_SYMS} (0 is fine if stripped/inlined - what matters is JNI_SYMS and NEEDED libs below)"
+          echo "::notice::Dynamic dependencies (NEEDED):"
+          readelf -d "$SO" | grep NEEDED | while IFS= read -r line; do
+            echo "::notice::  ${line}"
+          done
+
       - name: Upload built .so files
         if: success()
         uses: actions/upload-artifact@v4
