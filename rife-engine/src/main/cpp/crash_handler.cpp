@@ -15,7 +15,6 @@
 #include <csignal>
 #include <cstdlib>
 #include <cstring>
-#include <execinfo.h>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -48,12 +47,16 @@ void crashHandler(int sig, siginfo_t* info, void* context) {
     writeStr(signalName(sig));
     writeStr("\n");
 
-    void* frames[64];
-    const int frameCount = backtrace(frames, 64);
-    if (g_crashLogFd >= 0) {
-        writeStr("--- backtrace ---\n");
-        backtrace_symbols_fd(frames, frameCount, g_crashLogFd);
+    if (info != nullptr) {
+        char addrBuf[64];
+        int len = snprintf(addrBuf, sizeof(addrBuf), "fault address: %p\n", info->si_addr);
+        if (g_crashLogFd >= 0 && len > 0) {
+            write(g_crashLogFd, addrBuf, static_cast<size_t>(len));
+        }
     }
+    writeStr("(no backtrace - execinfo.h/backtrace() isn't available in this "
+             "NDK's Bionic libc; cross-reference with native_trace.txt for "
+             "which call was in flight when this happened)\n");
     writeStr("==== end crash report ====\n");
     if (g_crashLogFd >= 0) {
         fsync(g_crashLogFd);
