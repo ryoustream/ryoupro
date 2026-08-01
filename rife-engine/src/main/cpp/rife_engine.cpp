@@ -17,6 +17,7 @@
 // setup_native_deps.sh still pins a v4-era tag.
 #include "rife.h"
 #include "mat.h"
+#include "gpu.h"
 #include <algorithm>
 #include <cstdint>
 #include <vector>
@@ -75,7 +76,42 @@ void matToNv12(const ncnn::Mat& mat, uint8_t* outNv12, int width, int height) {
 } // namespace
 
 int RifeEngine::init(const InitParams& params) {
-    auto* rife = new RIFE(params.gpuId, params.ttaSpatial, params.ttaTemporal,
+    // REQUIRED once before any ncnn::get_gpu_count()/get_gpu_device() call
+    // works at all - confirmed by checking rife-ncnn-vulkan's own
+    // src/main.cpp, which calls this before constructing any RIFE instance.
+    // Missing this call was half of a real crash (SIGSEGV, fault address
+    // 0x0, inside the first RifeEngine::interpolate() call) - Vulkan device
+    // state was never actually initialized even though RIFE's constructor
+    // itself completed and returned a handle successfully.
+    static bool gpuInstanceCreated = false;
+    if (!gpuInstanceCreated) {
+        if (ncnn::create_gpu_instance() != 0) {
+            LOGE("ncnn::create_gpu_instance() failed - no usable Vulkan driver");
+            return -3;
+        }
+        gpuInstanceCreated = true;
+    }
+
+    // The OTHER half of the same crash: rife-ncnn-vulkan's own RIFE
+    // constructor treats gpuid==-1 as "CPU only, no Vulkan device at all"
+    // (vkdev = gpuid == -1 ? 0 : ncnn::get_gpu_device(gpuid); - verified by
+    // reading src/rife.cpp directly), which is the OPPOSITE of what this
+    // module's own RifeConfig.kt documents ("-1 = auto-pick fastest Vulkan
+    // device"). Translate this module's sentinel values into what
+    // rife-ncnn-vulkan actually expects, rather than passing -1 straight
+    // through and silently running with vkdev=null.
+    int resolvedGpuId;
+    if (params.gpuId == -1) {
+        resolvedGpuId = ncnn::get_default_gpu_index();
+    } else if (params.gpuId == -2) {
+        resolvedGpuId = -1; // rife-ncnn-vulkan's real "CPU only" sentinel
+    } else {
+        resolvedGpuId = params.gpuId; // explicit device index, pass through
+    }
+    LOGI("gpuId resolved: requested=%d -> rife-ncnn-vulkan gpuid=%d (gpu_count=%d)",
+         params.gpuId, resolvedGpuId, ncnn::get_gpu_count());
+
+    auto* rife = new RIFE(resolvedGpuId, params.ttaSpatial, params.ttaTemporal,
                            params.uhdMode, params.numThreads,
                            /*rife_v2=*/false, /*rife_v4=*/true);
     if (rife->load(params.modelDir.c_str()) != 0) {
@@ -85,7 +121,7 @@ int RifeEngine::init(const InitParams& params) {
     }
     backendHandle_ = rife;
     ready_ = true;
-    LOGI("RIFE engine ready (gpuId=%d, uhd=%d)", params.gpuId, params.uhdMode);
+    LOGI("RIFE engine ready (gpuid=%d, uhd=%d)", resolvedGpuId, params.uhdMode);
     return 0;
 }
 
