@@ -69,10 +69,10 @@ class RifeInterpolator private constructor(
          */
         suspend fun create(context: Context, config: RifeConfig, width: Int, height: Int): RifeInterpolator? =
             withContext(Dispatchers.IO) {
-                val modelDir = File(context.filesDir, "rife_models/${config.model.assetFolder}")
-                if (!modelDir.exists()) {
-                    Log.e(TAG, "Model not extracted: ${modelDir.absolutePath}. " +
-                        "Call RifeModelInstaller.ensureExtracted() first.")
+                val modelDir = try {
+                    RifeModelInstaller.ensureExtracted(context, config.model)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Model extraction failed for ${config.model.displayName}", e)
                     return@withContext null
                 }
                 val handle = nativeInit(

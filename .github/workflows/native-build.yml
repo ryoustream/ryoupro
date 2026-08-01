@@ -1,0 +1,69 @@
+name: Native RIFE Build (real ncnn)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'rife-engine/**'
+      - '.github/workflows/native-build.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK + CMake (pinned versions from build.gradle.kts)
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "ndk;27.0.12077973" "cmake;3.22.1"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Download prebuilt mpvlib.aar
+        run: |
+          mkdir -p app/libs
+          curl -fsSL -o app/libs/mpvlib.aar \
+            "https://github.com/SunnyVishnu3/mpvlibAndroid/releases/latest/download/mpvlib.aar"
+
+      - name: Build rife-engine native module only (real ncnn, arm64-v8a)
+        id: build
+        run: |
+          set -o pipefail
+          ./gradlew :rife-engine:externalNativeBuildDebug \
+            -Pandroid.injected.build.abi=arm64-v8a --stacktrace 2>&1 | tee native_build_output.log
+
+      - name: Surface failure details as annotations
+        if: failure()
+        run: |
+          echo "### Native build failed - key lines:" >> "$GITHUB_STEP_SUMMARY"
+          grep -E "error:|Error:|FAILED|What went wrong|Caused by:|fatal error:" native_build_output.log | tail -50 > errors.txt || true
+          cat errors.txt >> "$GITHUB_STEP_SUMMARY"
+          while IFS= read -r line; do
+            esc=$(printf '%s' "$line" | sed 's/%/%25/g' | tr -d '\r')
+            echo "::error::${esc}"
+          done < errors.txt
+
+      - name: Upload built .so files
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rife-engine-native-libs
+          path: rife-engine/build/intermediates/cxx/**/*.so
+          retention-days: 14

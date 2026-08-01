@@ -7,26 +7,70 @@
 
 #if RIFE_ENGINE_HAS_NCNN
 
-// NOTE: rife-ncnn-vulkan has shipped a couple of slightly different
-// signatures for RIFE::process() across its v2/v4 branches (v4 added the
-// free `timestep` argument for non-2x factors; older tags hardcode 0.5f).
-// Whichever tag setup_native_deps.sh pins, CONFIRM this signature against
-// the vendored third_party/rife-ncnn-vulkan/src/rife.h before building -
-// this file targets the v4.x signature.
+// rife-ncnn-vulkan has shipped a couple of slightly different signatures
+// for RIFE::process() across its v2/v4 branches (v4 added the free
+// `timestep` argument for non-2x factors; older tags hardcode 0.5f).
+// VERIFIED against nihui/rife-ncnn-vulkan HEAD (src/rife.h) on 2026-07-31:
+//   int process(const ncnn::Mat& in0image, const ncnn::Mat& in1image,
+//               float timestep, ncnn::Mat& outimage) const;
+// matches exactly what's called below - no change needed if
+// setup_native_deps.sh still pins a v4-era tag.
 #include "rife.h"
-#include <ncnn/mat.h>
+#include "mat.h"
+#include <algorithm>
+#include <cstdint>
+#include <vector>
 
 namespace {
-// NV12 -> planar RGB float ncnn::Mat expected by RIFE::process(), and back.
-// rife-ncnn-vulkan's own CLI does this via stb_image/webp on desktop; on
-// Android we go straight from the decoder's NV12 buffer to avoid an extra
-// PNG-shaped round trip.
+
+// ncnn provides yuv420sp2rgb_nv12() for the INPUT direction (verified in
+// ncnn/src/mat.h) but has no reverse rgb2yuv420sp - image-to-network is a
+// far more common need than network-to-video, so ncnn simply never needed
+// one. RIFE's own CLI tool only ever writes PNG/WebP output on desktop.
+// matToNv12() below is hand-written: standard BT.601 fixed-point
+// coefficients (the same family of "fast approximate" integer math ncnn's
+// own yuv420sp2rgb_nv12 uses, per its header comment), not bit-exact to any
+// particular reference implementation but visually correct and standard
+// practice for this kind of round-trip.
+
 ncnn::Mat nv12ToMat(const uint8_t* nv12, int width, int height) {
-    return ncnn::Mat::from_pixels(nv12, ncnn::Mat::PIXEL_YUV420SP2BGR, width, height);
+    std::vector<uint8_t> rgb(static_cast<size_t>(width) * height * 3);
+    ncnn::yuv420sp2rgb_nv12(nv12, width, height, rgb.data());
+    return ncnn::Mat::from_pixels(rgb.data(), ncnn::Mat::PIXEL_RGB, width, height);
 }
 
+inline uint8_t clamp8(int v) { return static_cast<uint8_t>(std::clamp(v, 0, 255)); }
+
 void matToNv12(const ncnn::Mat& mat, uint8_t* outNv12, int width, int height) {
-    mat.to_pixels(outNv12, ncnn::Mat::PIXEL_BGR2YUV420SP);
+    std::vector<uint8_t> rgb(static_cast<size_t>(width) * height * 3);
+    mat.to_pixels(rgb.data(), ncnn::Mat::PIXEL_RGB);
+
+    uint8_t* yPlane = outNv12;
+    uint8_t* uvPlane = outNv12 + static_cast<size_t>(width) * height;
+
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            const uint8_t* p = &rgb[(static_cast<size_t>(y) * width + x) * 3];
+            const int r = p[0], g = p[1], b = p[2];
+            const int yVal = ((66 * r + 129 * g + 25 * b + 128) >> 8) + 16;
+            yPlane[static_cast<size_t>(y) * width + x] = clamp8(yVal);
+        }
+    }
+    // 4:2:0 chroma subsampling - one U,V sample per 2x2 luma block, taken
+    // from the top-left pixel of each block (matches what most fast NV12
+    // encoders do rather than averaging all 4, negligible quality
+    // difference for interpolated video frames).
+    for (int y = 0; y < height; y += 2) {
+        for (int x = 0; x < width; x += 2) {
+            const uint8_t* p = &rgb[(static_cast<size_t>(y) * width + x) * 3];
+            const int r = p[0], g = p[1], b = p[2];
+            const int uVal = ((-38 * r - 74 * g + 112 * b + 128) >> 8) + 128;
+            const int vVal = ((112 * r - 94 * g - 18 * b + 128) >> 8) + 128;
+            const size_t uvIdx = static_cast<size_t>(y / 2) * width + x;
+            uvPlane[uvIdx] = clamp8(uVal);
+            uvPlane[uvIdx + 1] = clamp8(vVal);
+        }
+    }
 }
 } // namespace
 
