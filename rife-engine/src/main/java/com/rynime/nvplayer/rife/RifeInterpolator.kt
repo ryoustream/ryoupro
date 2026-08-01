@@ -16,6 +16,7 @@ private const val TAG = "RifeInterpolator"
  * MPVPlayerEngine treats MPVLib as a single-owner resource.
  */
 class RifeInterpolator private constructor(
+    private val appContext: Context,
     private val handle: Long,
     val width: Int,
     val height: Int,
@@ -37,7 +38,9 @@ class RifeInterpolator private constructor(
         withContext(Dispatchers.Default) {
             check(!released) { "RifeInterpolator already released" }
             val out = ByteBuffer.allocateDirect(frameBytes)
+            NativeTrace.mark(appContext, "nativeInterpolate: BEFORE (t=$timestep)")
             val rc = nativeInterpolate(handle, frameA, frameB, width, height, timestep, out)
+            NativeTrace.mark(appContext, "nativeInterpolate: AFTER rc=$rc")
             if (rc != 0) {
                 Log.e(TAG, "nativeInterpolate failed rc=$rc")
                 throw RifeInterpolationException(rc)
@@ -47,7 +50,9 @@ class RifeInterpolator private constructor(
 
     fun release() {
         if (released) return
+        NativeTrace.mark(appContext, "nativeRelease: BEFORE")
         nativeRelease(handle)
+        NativeTrace.mark(appContext, "nativeRelease: AFTER")
         released = true
     }
 
@@ -61,6 +66,21 @@ class RifeInterpolator private constructor(
             System.loadLibrary("rife_engine")
         }
 
+        @JvmStatic
+        private external fun nativeInstallCrashHandler(logFilePath: String)
+
+        /** Call once, early (e.g. from RifeInterpolator.create), before any other native call. */
+        fun installCrashHandlerIfNeeded(context: Context) {
+            if (crashHandlerInstalled) return
+            val dir = context.applicationContext.getExternalFilesDir(null) ?: context.applicationContext.filesDir
+            val path = File(dir, "native_crash_log.txt").absolutePath
+            nativeInstallCrashHandler(path)
+            crashHandlerInstalled = true
+        }
+
+        @Volatile
+        private var crashHandlerInstalled = false
+
         /**
          * Returns null (never throws) if the model asset is missing or the
          * native engine fails to initialize - callers should already have
@@ -69,21 +89,26 @@ class RifeInterpolator private constructor(
          */
         suspend fun create(context: Context, config: RifeConfig, width: Int, height: Int): RifeInterpolator? =
             withContext(Dispatchers.IO) {
+                val appContext = context.applicationContext
+                installCrashHandlerIfNeeded(appContext)
+                NativeTrace.markSessionStart(appContext, "RifeInterpolator.create ${config.model.displayName} ${width}x${height}")
                 val modelDir = try {
-                    RifeModelInstaller.ensureExtracted(context, config.model)
+                    RifeModelInstaller.ensureExtracted(appContext, config.model)
                 } catch (e: Exception) {
                     Log.e(TAG, "Model extraction failed for ${config.model.displayName}", e)
                     return@withContext null
                 }
+                NativeTrace.mark(appContext, "nativeInit: BEFORE (modelDir=${modelDir.absolutePath}, gpuId=${config.gpuId})")
                 val handle = nativeInit(
                     modelDir.absolutePath, config.gpuId,
                     config.ttaSpatial, config.ttaTemporal, config.uhdMode, config.numThreads,
                 )
+                NativeTrace.mark(appContext, "nativeInit: AFTER handle=$handle")
                 if (handle == 0L) {
                     Log.e(TAG, "nativeInit failed for ${config.model.displayName}")
                     return@withContext null
                 }
-                RifeInterpolator(handle, width, height)
+                RifeInterpolator(appContext, handle, width, height)
             }
 
         @JvmStatic

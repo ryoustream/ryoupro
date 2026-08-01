@@ -108,6 +108,7 @@ add_library(rife_engine SHARED
     rife_jni.cpp
     rife_engine.cpp
     mpv_rife_stream_source.cpp
+    crash_handler.cpp
     $<$<BOOL:${RIFE_DEPS_AVAILABLE}>:${THIRD_PARTY_DIR}/rife-ncnn-vulkan/src/rife.cpp>
     $<$<BOOL:${RIFE_DEPS_AVAILABLE}>:${THIRD_PARTY_DIR}/rife-ncnn-vulkan/src/warp.cpp>
 )

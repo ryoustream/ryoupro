@@ -56,6 +56,7 @@ class RifeExportWorker(appContext: android.content.Context, params: WorkerParame
     }
 
     private suspend fun runExport(inputUri: android.net.Uri, outputPath: String, scaleFactor: Int) {
+        com.rynime.nvplayer.rife.NativeTrace.mark(applicationContext, "runExport: start, uri=$inputUri, scale=$scaleFactor")
         val extractor = MediaExtractor()
         extractor.setDataSource(applicationContext, inputUri, null)
 
@@ -79,6 +80,7 @@ class RifeExportWorker(appContext: android.content.Context, params: WorkerParame
             ?: throw IllegalStateException(
                 "RIFE engine unavailable (${config.model.displayName}) - check RifeCapabilityProbe / model assets"
             )
+        com.rynime.nvplayer.rife.NativeTrace.mark(applicationContext, "runExport: RifeInterpolator.create succeeded, entering decode/encode setup")
 
         val mime = requireNotNull(videoFormat.getString(MediaFormat.KEY_MIME)) { "Video track missing MIME type" }
         val decoder = MediaCodec.createDecoderByType(mime)

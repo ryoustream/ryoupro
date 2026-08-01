@@ -78,6 +78,16 @@ Java_com_rynime_nvplayer_rife_RifeInterpolator_nativeRelease(
 // header comment and /mpv-android-patch/README.md.
 int rife_register_mpv_stream_source(void* mpvHandle);
 
+// Declared in crash_handler.cpp - installs SIGSEGV/SIGABRT/etc handlers.
+void rife_install_crash_handler(const char* logFilePath);
+
+JNIEXPORT void JNICALL
+Java_com_rynime_nvplayer_rife_RifeInterpolator_nativeInstallCrashHandler(
+        JNIEnv* env, jclass /*clazz*/, jstring logFilePath) {
+    std::string path = jstringToStd(env, logFilePath);
+    rife_install_crash_handler(path.c_str());
+}
+
 JNIEXPORT jint JNICALL
 Java_com_rynime_nvplayer_rife_realtime_RifeFrameSource_nativeRegisterStreamSource(
         JNIEnv* /*env*/, jobject /*thiz*/, jlong mpvHandle, jstring /*modelFolder*/, jint /*scaleFactor*/) {
