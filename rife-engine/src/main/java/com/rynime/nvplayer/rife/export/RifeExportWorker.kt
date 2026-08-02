@@ -166,6 +166,7 @@ class RifeExportWorker(appContext: android.content.Context, params: WorkerParame
         var previousPtsUs = 0L
         var framesEncoded = 0
         val muxerState = MuxerState()
+        val startTimeMs = System.currentTimeMillis()
 
         while (!decodeDone) {
             // --- feed compressed input into the decoder ---
@@ -217,10 +218,17 @@ class RifeExportWorker(appContext: android.content.Context, params: WorkerParame
                         previousFrame = currentFrame
                         previousPtsUs = currentPtsUs
 
-                        if (estimatedFrameCount > 0 && framesEncoded % 30 == 0) {
+                        if (estimatedFrameCount > 0) {
+                            val totalTarget = estimatedFrameCount * scale.factor
+                            val elapsedMs = System.currentTimeMillis() - startTimeMs
+                            val etaSeconds = if (framesEncoded > 0) {
+                                val msPerFrame = elapsedMs.toDouble() / framesEncoded
+                                ((totalTarget - framesEncoded) * msPerFrame / 1000.0).toInt().coerceAtLeast(0)
+                            } else null
                             setProgress(workDataOf(
                                 "framesDone" to framesEncoded,
-                                "framesTotal" to estimatedFrameCount * scale.factor,
+                                "framesTotal" to totalTarget,
+                                "etaSeconds" to (etaSeconds ?: -1),
                             ))
                         }
                     }

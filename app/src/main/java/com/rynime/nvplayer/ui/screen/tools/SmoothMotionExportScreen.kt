@@ -102,12 +102,20 @@ fun SmoothMotionExportScreen(
 
             when (val p = progress) {
                 null -> Unit
-                is ExportProgress.Queued -> LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                is ExportProgress.Queued -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    Text("Queued…", style = MaterialTheme.typography.bodySmall)
+                }
                 is ExportProgress.Running -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     val fraction = if (p.framesTotal > 0) p.framesDone.toFloat() / p.framesTotal else 0f
                     LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth())
-                    Text("${p.framesDone} / ${p.framesTotal.takeIf { it > 0 } ?: "?"} frames",
-                        style = MaterialTheme.typography.bodySmall)
+                    val label = if (p.framesTotal > 0) {
+                        val etaText = p.etaSeconds?.let { s -> " (~${s / 60}m ${s % 60}s left)" } ?: ""
+                        "${p.framesDone} / ${p.framesTotal} frames$etaText"
+                    } else {
+                        "Loading model + starting GPU… (can take longer on first run)"
+                    }
+                    Text(label, style = MaterialTheme.typography.bodySmall)
                 }
                 is ExportProgress.Done -> Text(
                     "Done - saved to ${p.outputPath}",
