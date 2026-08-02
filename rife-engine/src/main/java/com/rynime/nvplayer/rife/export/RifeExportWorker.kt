@@ -157,13 +157,14 @@ class RifeExportWorker(appContext: android.content.Context, params: WorkerParame
         sourceFrameRate: Int,
         estimatedFrameCount: Int,
     ) {
-        val bufferInfo = MediaCodec.BufferInfo()
+        val bufferInfo = MediaCodec.BufferInfo() // decoder dequeue only
+        val encoderBufferInfo = MediaCodec.BufferInfo() // encoder drain only - MUST be separate,
+        // see the bug note in drainEncoder()'s call sites below
         var inputDone = false
         var decodeDone = false
         var previousFrame: ByteBuffer? = null
         var previousPtsUs = 0L
         var framesEncoded = 0
-        val frameGapUs = if (sourceFrameRate > 0) 1_000_000L / sourceFrameRate else 33_333L
         val muxerState = MuxerState()
 
         while (!decodeDone) {
@@ -192,21 +193,29 @@ class RifeExportWorker(appContext: android.content.Context, params: WorkerParame
                     val currentFrame = outBuffer?.let { toNv12(it, decoder.getOutputFormat(outIndex)) }
 
                     if (currentFrame != null) {
+                        val currentPtsUs = bufferInfo.presentationTimeUs
                         val prev = previousFrame
                         if (prev != null) {
+                            // Real midpoint between the two actual frame timestamps, not an
+                            // assumed-constant-framerate offset - phone-captured video is
+                            // frequently variable frame rate, and using a wrong assumed gap
+                            // here was producing non-monotonic PTS values fed to the encoder,
+                            // which corrupted the whole container's sample table (this is what
+                            // caused the audio track's duration to read as ~54 hours and the
+                            // claimed vs. actually-decodable frame count mismatch).
                             for (t in scale.timesteps()) {
                                 val interpolated = interpolator.interpolate(prev, currentFrame, t)
-                                val ptsUs = previousPtsUs + (frameGapUs * t).toLong()
+                                val ptsUs = previousPtsUs + ((currentPtsUs - previousPtsUs) * t).toLong()
                                 feedEncoder(encoder, interpolated, ptsUs, endOfStream = false)
-                                drainEncoder(encoder, muxer, bufferInfo, muxerState)
+                                drainEncoder(encoder, muxer, encoderBufferInfo, muxerState)
                                 framesEncoded++
                             }
                         }
-                        feedEncoder(encoder, currentFrame, bufferInfo.presentationTimeUs, endOfStream = false)
-                        drainEncoder(encoder, muxer, bufferInfo, muxerState)
+                        feedEncoder(encoder, currentFrame, currentPtsUs, endOfStream = false)
+                        drainEncoder(encoder, muxer, encoderBufferInfo, muxerState)
                         framesEncoded++
                         previousFrame = currentFrame
-                        previousPtsUs = bufferInfo.presentationTimeUs
+                        previousPtsUs = currentPtsUs
 
                         if (estimatedFrameCount > 0 && framesEncoded % 30 == 0) {
                             setProgress(workDataOf(
@@ -219,7 +228,7 @@ class RifeExportWorker(appContext: android.content.Context, params: WorkerParame
                 decoder.releaseOutputBuffer(outIndex, false)
                 if (isEos) {
                     feedEncoder(encoder, null, 0, endOfStream = true)
-                    drainEncoder(encoder, muxer, bufferInfo, muxerState)
+                    drainEncoder(encoder, muxer, encoderBufferInfo, muxerState)
                     decodeDone = true
                 }
             }
