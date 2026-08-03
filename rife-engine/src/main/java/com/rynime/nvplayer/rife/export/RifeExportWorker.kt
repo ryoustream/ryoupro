@@ -322,6 +322,8 @@ class RifeExportWorker(appContext: android.content.Context, params: WorkerParame
      * exported frames on this device - not a metadata/PTS issue (already
      * fixed separately), a genuine wrong-bytes-read pixel bug.
      */
+    private var frameIndexForTrace = 0
+
     private fun imageToNv12(image: android.media.Image): ByteBuffer {
         val width = image.width
         val height = image.height
@@ -335,15 +337,23 @@ class RifeExportWorker(appContext: android.content.Context, params: WorkerParame
         val yBuf = yPlane.buffer
         val yRowStride = yPlane.rowStride
         val yRow = ByteArray(yRowStride)
+        var yShortReads = 0
         for (row in 0 until height) {
             yBuf.position(row * yRowStride)
-            yBuf.get(yRow, 0, minOf(yRowStride, yBuf.remaining()))
+            val avail = yBuf.remaining()
+            if (avail < yRowStride) yShortReads++
+            val readLen = minOf(yRowStride, avail).coerceAtLeast(0)
+            if (readLen > 0) yBuf.get(yRow, 0, readLen)
+            if (readLen < yRowStride) java.util.Arrays.fill(yRow, readLen, yRowStride, 16) // neutral-ish black, not zero
             out.put(yRow, 0, width)
         }
 
         // --- Chroma: build interleaved NV12 U,V output regardless of the
         // source's own pixelStride (1 = separate planar, 2 = already
-        // interleaved semi-planar) ---
+        // interleaved semi-planar). Falls back to neutral 128 (no color,
+        // not the same as 0 which reads as strong green after YUV->RGB)
+        // for any row that comes up short, rather than leaving whatever
+        // allocateDirect() happened to zero-initialize. ---
         val uBuf = uPlane.buffer
         val vBuf = vPlane.buffer
         val uRowStride = uPlane.rowStride
@@ -352,19 +362,43 @@ class RifeExportWorker(appContext: android.content.Context, params: WorkerParame
         val vPixelStride = vPlane.pixelStride
         val chromaHeight = height / 2
         val chromaWidth = width / 2
-        val uRow = ByteArray(uRowStride)
-        val vRow = ByteArray(vRowStride)
+        val uRow = ByteArray(uRowStride) { 128.toByte() }
+        val vRow = ByteArray(vRowStride) { 128.toByte() }
+        var uShortReads = 0
+        var vShortReads = 0
 
         for (row in 0 until chromaHeight) {
             uBuf.position(row * uRowStride)
-            uBuf.get(uRow, 0, minOf(uRowStride, uBuf.remaining()))
+            val uAvail = uBuf.remaining()
+            if (uAvail < uRowStride) uShortReads++
+            val uReadLen = minOf(uRowStride, uAvail).coerceAtLeast(0)
+            if (uReadLen > 0) uBuf.get(uRow, 0, uReadLen)
+            if (uReadLen < uRowStride) java.util.Arrays.fill(uRow, uReadLen, uRowStride, 128.toByte())
+
             vBuf.position(row * vRowStride)
-            vBuf.get(vRow, 0, minOf(vRowStride, vBuf.remaining()))
+            val vAvail = vBuf.remaining()
+            if (vAvail < vRowStride) vShortReads++
+            val vReadLen = minOf(vRowStride, vAvail).coerceAtLeast(0)
+            if (vReadLen > 0) vBuf.get(vRow, 0, vReadLen)
+            if (vReadLen < vRowStride) java.util.Arrays.fill(vRow, vReadLen, vRowStride, 128.toByte())
+
             for (col in 0 until chromaWidth) {
                 out.put(uRow[col * uPixelStride])
                 out.put(vRow[col * vPixelStride])
             }
         }
+
+        // Terse one-line-per-frame diagnostic - cheap enough to log every
+        // frame (NativeTrace caps the file at 512KB and truncates on
+        // overflow), and this is exactly the data needed to pin down an
+        // intermittent per-frame corruption without more guessing.
+        com.rynime.nvplayer.rife.NativeTrace.mark(
+            applicationContext,
+            "imageToNv12 #${frameIndexForTrace++}: fmt=${image.format} planes=${image.planes.size} " +
+                "Y(stride=$yRowStride,short=$yShortReads) " +
+                "U(stride=$uRowStride,px=$uPixelStride,short=$uShortReads) " +
+                "V(stride=$vRowStride,px=$vPixelStride,short=$vShortReads)"
+        )
 
         out.flip()
         return out
