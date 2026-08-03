@@ -138,14 +138,14 @@ class RifeExportWorker(appContext: android.content.Context, params: WorkerParame
      * gaps -> feed [interp..., original] to the encoder with evenly-spaced
      * presentation timestamps -> drain encoder output into the muxer.
      *
-     * NOTE ON PIXEL FORMAT: this assumes the decoder's output buffer is
-     * already NV12-compatible (COLOR_FormatYUV420Flexible, the documented
-     * default when no output Surface is set). Some OEM decoders report
-     * non-standard strides via KEY_STRIDE/KEY_SLICE_HEIGHT rather than
-     * tightly-packed width/height - toNv12() below handles the common case,
-     * but hasn't been validated against every vendor's quirks. If you see
-     * visible tearing/skew on a specific device during Fase 2 testing,
-     * check KEY_STRIDE handling here first.
+     * NOTE ON PIXEL FORMAT: reads via decoder.getOutputImage() (YUV_420_888
+     * planes with their own real rowStride/pixelStride per plane) rather
+     * than the raw output ByteBuffer + KEY_STRIDE/KEY_SLICE_HEIGHT guessing
+     * this used to do - COLOR_FormatYUV420Flexible's actual physical layout
+     * genuinely varies by vendor (semi-planar vs fully-planar, interleaved
+     * vs separate U/V), which the raw-buffer approach got wrong on at least
+     * one real device (green/noise corruption at the bottom of exported
+     * frames - confirmed and fixed, not hypothetical). See imageToNv12().
      */
     private suspend fun pumpVideoThroughRife(
         extractor: MediaExtractor,
@@ -190,8 +190,9 @@ class RifeExportWorker(appContext: android.content.Context, params: WorkerParame
             if (outIndex >= 0) {
                 val isEos = (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0
                 if (bufferInfo.size > 0) {
-                    val outBuffer = decoder.getOutputBuffer(outIndex)
-                    val currentFrame = outBuffer?.let { toNv12(it, decoder.getOutputFormat(outIndex)) }
+                    val image = decoder.getOutputImage(outIndex)
+                    val currentFrame = image?.let { imageToNv12(it) }
+                    image?.close()
 
                     if (currentFrame != null) {
                         val currentPtsUs = bufferInfo.presentationTimeUs
@@ -309,31 +310,62 @@ class RifeExportWorker(appContext: android.content.Context, params: WorkerParame
         audioExtractor.release()
     }
 
-    private fun toNv12(buffer: ByteBuffer, format: MediaFormat): ByteBuffer {
-        val width = format.getInteger(MediaFormat.KEY_WIDTH)
-        val height = format.getInteger(MediaFormat.KEY_HEIGHT)
-        val stride = runCatching { format.getInteger(MediaFormat.KEY_STRIDE) }.getOrDefault(width)
-        val sliceHeight = runCatching { format.getInteger(MediaFormat.KEY_SLICE_HEIGHT) }.getOrDefault(height)
+    /**
+     * Converts a decoder's output Image (YUV_420_888, 3 planes) to tightly
+     * packed NV12 (Y plane, then interleaved U,V). Reads each plane using
+     * its OWN reported rowStride/pixelStride rather than assuming NV12
+     * semi-planar layout - COLOR_FormatYUV420Flexible's actual physical
+     * layout (semi-planar vs fully-planar, interleaved vs separate U/V,
+     * padding) genuinely varies by vendor, which KEY_STRIDE/KEY_SLICE_HEIGHT
+     * on the raw ByteBuffer never reliably captured. This was the real
+     * cause of the green/noise ("semut") corruption at the bottom of
+     * exported frames on this device - not a metadata/PTS issue (already
+     * fixed separately), a genuine wrong-bytes-read pixel bug.
+     */
+    private fun imageToNv12(image: android.media.Image): ByteBuffer {
+        val width = image.width
+        val height = image.height
         val out = ByteBuffer.allocateDirect(width * height * 3 / 2)
-        if (stride == width && sliceHeight == height) {
-            out.put(buffer)
-        } else {
-            // Strip stride padding row-by-row for Y, then for the interleaved
-            // chroma plane. Kept simple/readable over maximally fast - this
-            // is the path to profile first if export is slower than expected.
-            val bytes = ByteArray(buffer.remaining())
-            buffer.get(bytes)
-            var srcOffset = 0
-            repeat(height) {
-                out.put(bytes, srcOffset, width)
-                srcOffset += stride
-            }
-            srcOffset = stride * sliceHeight
-            repeat(height / 2) {
-                out.put(bytes, srcOffset, width)
-                srcOffset += stride
+
+        val yPlane = image.planes[0]
+        val uPlane = image.planes[1]
+        val vPlane = image.planes[2]
+
+        // --- Y plane: one byte per pixel, row by row using its real rowStride ---
+        val yBuf = yPlane.buffer
+        val yRowStride = yPlane.rowStride
+        val yRow = ByteArray(yRowStride)
+        for (row in 0 until height) {
+            yBuf.position(row * yRowStride)
+            yBuf.get(yRow, 0, minOf(yRowStride, yBuf.remaining()))
+            out.put(yRow, 0, width)
+        }
+
+        // --- Chroma: build interleaved NV12 U,V output regardless of the
+        // source's own pixelStride (1 = separate planar, 2 = already
+        // interleaved semi-planar) ---
+        val uBuf = uPlane.buffer
+        val vBuf = vPlane.buffer
+        val uRowStride = uPlane.rowStride
+        val vRowStride = vPlane.rowStride
+        val uPixelStride = uPlane.pixelStride
+        val vPixelStride = vPlane.pixelStride
+        val chromaHeight = height / 2
+        val chromaWidth = width / 2
+        val uRow = ByteArray(uRowStride)
+        val vRow = ByteArray(vRowStride)
+
+        for (row in 0 until chromaHeight) {
+            uBuf.position(row * uRowStride)
+            uBuf.get(uRow, 0, minOf(uRowStride, uBuf.remaining()))
+            vBuf.position(row * vRowStride)
+            vBuf.get(vRow, 0, minOf(vRowStride, vBuf.remaining()))
+            for (col in 0 until chromaWidth) {
+                out.put(uRow[col * uPixelStride])
+                out.put(vRow[col * vPixelStride])
             }
         }
+
         out.flip()
         return out
     }
