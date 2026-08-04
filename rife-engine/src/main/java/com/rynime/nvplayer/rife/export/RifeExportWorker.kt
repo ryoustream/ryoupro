@@ -250,18 +250,102 @@ class RifeExportWorker(appContext: android.content.Context, params: WorkerParame
         var started = false
     }
 
+    private var encoderRawFallbackWarned = false
+
+    /**
+     * NOTE ON PIXEL FORMAT (encode side): mirrors the decode-side fix in
+     * imageToNv12() above. The encoder is configured with
+     * COLOR_FormatYUV420Flexible, so its input buffer's physical stride is
+     * NOT guaranteed to equal width - writing a tightly-packed NV12 buffer
+     * straight into encoder.getInputBuffer() assumes stride == width, which
+     * is exactly the wrong-bytes-read bug already fixed for the decoder
+     * output, just on the opposite side of the pipeline. This is what was
+     * producing the streak / solid-green-band corruption in exported
+     * frames on sources whose width isn't stride-aligned (e.g. 474px).
+     * Fix: use getInputImage() and write each plane using ITS OWN reported
+     * rowStride/pixelStride, same generic per-plane approach as imageToNv12.
+     */
     private fun feedEncoder(encoder: MediaCodec, frame: ByteBuffer?, ptsUs: Long, endOfStream: Boolean) {
         val inIndex = encoder.dequeueInputBuffer(CODEC_TIMEOUT_US)
         if (inIndex < 0) return
-        val inBuffer = encoder.getInputBuffer(inIndex) ?: return
         if (endOfStream) {
             encoder.queueInputBuffer(inIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
             return
         }
         val nonNullFrame = requireNotNull(frame) { "feedEncoder called without a frame and without endOfStream" }
-        inBuffer.clear()
-        inBuffer.put(nonNullFrame)
+        val inputImage = encoder.getInputImage(inIndex)
+        if (inputImage != null) {
+            nv12ToImage(nonNullFrame, inputImage)
+        } else {
+            // Should not happen given COLOR_FormatYUV420Flexible + buffer-mode
+            // configure(), but if some vendor combo ever returns null here,
+            // fall back to the old raw path rather than dropping the frame -
+            // log once so it's obvious in traces which device needed it.
+            if (!encoderRawFallbackWarned) {
+                Log.w(TAG, "getInputImage() returned null - " +
+                    "falling back to raw getInputBuffer() copy, stride corruption is possible on this device")
+                encoderRawFallbackWarned = true
+            }
+            val inBuffer = encoder.getInputBuffer(inIndex) ?: return
+            inBuffer.clear()
+            inBuffer.put(nonNullFrame)
+        }
         encoder.queueInputBuffer(inIndex, 0, nonNullFrame.capacity(), ptsUs, 0)
+    }
+
+    /**
+     * Writes a tightly-packed NV12 buffer (Y plane, then interleaved U,V -
+     * the layout imageToNv12() produces) into a real encoder input Image,
+     * honoring that Image's own per-plane rowStride/pixelStride. Mirror
+     * counterpart of imageToNv12(); see feedEncoder() for why this exists.
+     */
+    private fun nv12ToImage(src: ByteBuffer, image: android.media.Image) {
+        val width = image.width
+        val height = image.height
+        src.rewind()
+
+        // --- Y plane ---
+        val yPlane = image.planes[0]
+        val yBuf = yPlane.buffer
+        val yRowStride = yPlane.rowStride
+        val yRow = ByteArray(width)
+        for (row in 0 until height) {
+            src.get(yRow, 0, width)
+            yBuf.position(row * yRowStride)
+            yBuf.put(yRow, 0, width)
+        }
+
+        // --- U/V planes: src has them interleaved (U,V,U,V,...) tightly
+        // packed per chroma row; de-interleave into each plane's own
+        // rowStride/pixelStride (handles both semi-planar and fully-planar
+        // destinations, same as imageToNv12's generic read does) ---
+        val chromaWidth = width / 2
+        val chromaHeight = height / 2
+        val uPlane = image.planes[1]
+        val vPlane = image.planes[2]
+        val uBuf = uPlane.buffer
+        val vBuf = vPlane.buffer
+        val uRowStride = uPlane.rowStride
+        val vRowStride = vPlane.rowStride
+        val uPixelStride = uPlane.pixelStride
+        val vPixelStride = vPlane.pixelStride
+        val srcRow = ByteArray(chromaWidth * 2)
+        for (row in 0 until chromaHeight) {
+            src.get(srcRow, 0, chromaWidth * 2)
+            val uBase = row * uRowStride
+            val vBase = row * vRowStride
+            // Absolute single-byte puts on purpose: on semi-planar devices
+            // planes[1]/planes[2] alias the SAME underlying native memory
+            // (offset by 1 byte) - a bulk put with zero-filled pixelStride
+            // gap bytes would clobber the other channel's just-written
+            // bytes the moment we write the second plane. Absolute
+            // per-byte put touches only the byte that belongs to each
+            // channel, so it's correct regardless of aliasing.
+            for (col in 0 until chromaWidth) {
+                uBuf.put(uBase + col * uPixelStride, srcRow[col * 2])
+                vBuf.put(vBase + col * vPixelStride, srcRow[col * 2 + 1])
+            }
+        }
     }
 
     private fun drainEncoder(
