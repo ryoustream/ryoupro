@@ -19,6 +19,7 @@
 #include "mat.h"
 #include "gpu.h"
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <vector>
 
@@ -43,8 +44,46 @@ ncnn::Mat nv12ToMat(const uint8_t* nv12, int width, int height) {
 inline uint8_t clamp8(int v) { return static_cast<uint8_t>(std::clamp(v, 0, 255)); }
 
 void matToNv12(const ncnn::Mat& mat, uint8_t* outNv12, int width, int height) {
+    // rife-ncnn-vulkan's RIFE::process()/process_v4() *signature* is
+    // pinned and re-verified per tag (see comment above this namespace),
+    // but the *value range* of the returned outimage Mat is not part of
+    // that contract - upstream src/rife.cpp shows postproc denormalizing
+    // back to pixel range internally, but that isn't guaranteed identical
+    // across the v2/v4 code paths or ncnn versions. If outimage were ever
+    // handed back as normalized [0,1] float instead of pixel-range
+    // [0,255], to_pixels() below would silently round nearly every value
+    // to 0 or 1 - no crash, just a near-uniform near-black frame,
+    // indistinguishable at a glance from a real black frame. That exactly
+    // matches the reported symptom: every original frame fine, every
+    // RIFE-interpolated frame black (measured ~(1,1,1) RGB, not the
+    // uninitialized-buffer green you'd get from a memory bug). Detect it
+    // defensively by sampling raw values before trusting to_pixels(), and
+    // log which branch fired so the next trace confirms it either way.
+    ncnn::Mat pixelRangeMat = mat;
+    {
+        float sampleMax = 0.f;
+        for (int c = 0; c < mat.c; ++c) {
+            const float* p = mat.channel(c);
+            const int n = mat.w * mat.h;
+            const int stride = std::max(1, n / 64); // ~64 samples/channel, enough to tell 0..1 from 0..255
+            for (int i = 0; i < n; i += stride) {
+                sampleMax = std::max(sampleMax, std::fabs(p[i]));
+            }
+        }
+        if (sampleMax <= 2.0f) {
+            LOGI("matToNv12: RIFE output looks normalized (sampleMax=%.4f, expected ~0-255) "
+                 "- rescaling x255 before to_pixels() to avoid a near-black frame", sampleMax);
+            pixelRangeMat = mat.clone();
+            for (int c = 0; c < pixelRangeMat.c; ++c) {
+                float* p = pixelRangeMat.channel(c);
+                const int n = pixelRangeMat.w * pixelRangeMat.h;
+                for (int i = 0; i < n; ++i) p[i] *= 255.f;
+            }
+        }
+    }
+
     std::vector<uint8_t> rgb(static_cast<size_t>(width) * height * 3);
-    mat.to_pixels(rgb.data(), ncnn::Mat::PIXEL_RGB);
+    pixelRangeMat.to_pixels(rgb.data(), ncnn::Mat::PIXEL_RGB);
 
     uint8_t* yPlane = outNv12;
     uint8_t* uvPlane = outNv12 + static_cast<size_t>(width) * height;
