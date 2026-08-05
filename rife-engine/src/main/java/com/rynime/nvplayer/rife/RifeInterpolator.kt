@@ -102,6 +102,7 @@ class RifeInterpolator private constructor(
                 val handle = nativeInit(
                     modelDir.absolutePath, config.gpuId,
                     config.ttaSpatial, config.ttaTemporal, config.uhdMode, config.numThreads,
+                    NativeTrace.filePath(appContext),
                 )
                 NativeTrace.mark(appContext, "nativeInit: AFTER handle=$handle")
                 if (handle == 0L) {
@@ -114,7 +115,7 @@ class RifeInterpolator private constructor(
         @JvmStatic
         private external fun nativeInit(
             modelDir: String, gpuId: Int, ttaSpatial: Boolean, ttaTemporal: Boolean,
-            uhdMode: Boolean, numThreads: Int,
+            uhdMode: Boolean, numThreads: Int, traceFilePath: String,
         ): Long
 
         @JvmStatic

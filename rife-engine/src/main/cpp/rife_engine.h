@@ -22,6 +22,15 @@ public:
         bool ttaTemporal = false;
         bool uhdMode = false;   // rife-UHD tiling path for >=2K sources
         int numThreads = 2;
+        // Same path NativeTrace.kt writes to (getExternalFilesDir(null) ?:
+        // filesDir, "native_trace.txt"). Passed down so native-side
+        // diagnostics (e.g. matToNv12's output-range check) land in the
+        // one trace file users can actually retrieve - logcat is not
+        // reliably readable on all devices (some vendor ROMs drop
+        // everything after early boot), but this file always has been.
+        // Empty string disables native-side tracing (still works, just
+        // silently no-ops - see nativeTraceMark in rife_engine.cpp).
+        std::string traceFilePath;
     };
 
     RifeEngine() = default;

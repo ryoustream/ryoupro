@@ -24,7 +24,7 @@ JNIEXPORT jlong JNICALL
 Java_com_rynime_nvplayer_rife_RifeInterpolator_nativeInit(
         JNIEnv* env, jclass /*clazz*/,
         jstring modelDir, jint gpuId, jboolean ttaSpatial, jboolean ttaTemporal,
-        jboolean uhdMode, jint numThreads) {
+        jboolean uhdMode, jint numThreads, jstring traceFilePath) {
     auto* engine = new RifeEngine();
     RifeEngine::InitParams params;
     params.modelDir = jstringToStd(env, modelDir);
@@ -33,6 +33,7 @@ Java_com_rynime_nvplayer_rife_RifeInterpolator_nativeInit(
     params.ttaTemporal = (ttaTemporal == JNI_TRUE);
     params.uhdMode = (uhdMode == JNI_TRUE);
     params.numThreads = numThreads;
+    params.traceFilePath = jstringToStd(env, traceFilePath);
 
     if (engine->init(params) != 0) {
         LOGE("RifeEngine init failed for model=%s", params.modelDir.c_str());

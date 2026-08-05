@@ -1,9 +1,62 @@
 #include "rife_engine.h"
 #include <android/log.h>
+#include <cstdarg>
+#include <cstdio>
+#include <ctime>
+#include <string>
+#include <sys/time.h>
+#include <unistd.h>
 
 #define LOG_TAG "RifeEngine"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
+
+namespace {
+// Mirrors NativeTrace.kt exactly: same file, same "[HH:mm:ss.SSS] " prefix,
+// same 512KB rotation. Native-side diagnostics land in the one artifact
+// users can actually retrieve - logcat isn't reliable on every device (some
+// vendor ROMs stop logging shortly after boot/audiohal init). Path is set
+// once by RifeEngine::init() from Kotlin's InitParams.traceFilePath; calls
+// before that (or with tracing disabled) silently no-op.
+std::string g_traceFilePath;
+constexpr long kTraceMaxBytes = 512 * 1024;
+
+void nativeTraceMark(const char* fmt, ...) {
+    if (g_traceFilePath.empty()) return;
+
+    // Same rotation rule as NativeTrace.kt: once the file's over the cap,
+    // drop it and start fresh instead of growing forever.
+    FILE* check = fopen(g_traceFilePath.c_str(), "r");
+    if (check != nullptr) {
+        fseek(check, 0, SEEK_END);
+        long size = ftell(check);
+        fclose(check);
+        if (size > kTraceMaxBytes) {
+            remove(g_traceFilePath.c_str());
+        }
+    }
+
+    FILE* f = fopen(g_traceFilePath.c_str(), "a");
+    if (f == nullptr) return;
+
+    struct timeval tv{};
+    gettimeofday(&tv, nullptr);
+    struct tm tmNow{};
+    localtime_r(&tv.tv_sec, &tmNow);
+    fprintf(f, "[%02d:%02d:%02d.%03ld] ", tmNow.tm_hour, tmNow.tm_min, tmNow.tm_sec,
+            static_cast<long>(tv.tv_usec / 1000));
+
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(f, fmt, args);
+    va_end(args);
+    fputc('\n', f);
+
+    fflush(f);
+    fsync(fileno(f));
+    fclose(f);
+}
+} // namespace
 
 #if RIFE_ENGINE_HAS_NCNN
 
@@ -70,7 +123,16 @@ void matToNv12(const ncnn::Mat& mat, uint8_t* outNv12, int width, int height) {
                 sampleMax = std::max(sampleMax, std::fabs(p[i]));
             }
         }
-        if (sampleMax <= 2.0f) {
+        const bool looksNormalized = sampleMax <= 2.0f;
+        // Always recorded (not just when the rescale branch fires) - a
+        // trace full of "sampleMax=0.0031" with rescale never firing is
+        // just as diagnostic as one where it fires every frame; either
+        // way it settles which side of this bug we're actually looking at
+        // instead of leaving it a guess.
+        nativeTraceMark("matToNv12: sampleMax=%.4f -> %s", sampleMax,
+                         looksNormalized ? "rescaling x255 (looked normalized)"
+                                         : "unchanged (already pixel-range)");
+        if (looksNormalized) {
             LOGI("matToNv12: RIFE output looks normalized (sampleMax=%.4f, expected ~0-255) "
                  "- rescaling x255 before to_pixels() to avoid a near-black frame", sampleMax);
             pixelRangeMat = mat.clone();
@@ -115,6 +177,8 @@ void matToNv12(const ncnn::Mat& mat, uint8_t* outNv12, int width, int height) {
 } // namespace
 
 int RifeEngine::init(const InitParams& params) {
+    g_traceFilePath = params.traceFilePath;
+
     // REQUIRED once before any ncnn::get_gpu_count()/get_gpu_device() call
     // works at all - confirmed by checking rife-ncnn-vulkan's own
     // src/main.cpp, which calls this before constructing any RIFE instance.
@@ -126,6 +190,7 @@ int RifeEngine::init(const InitParams& params) {
     if (!gpuInstanceCreated) {
         if (ncnn::create_gpu_instance() != 0) {
             LOGE("ncnn::create_gpu_instance() failed - no usable Vulkan driver");
+            nativeTraceMark("RifeEngine::init: ncnn::create_gpu_instance() FAILED - no usable Vulkan driver");
             return -3;
         }
         gpuInstanceCreated = true;
@@ -149,18 +214,22 @@ int RifeEngine::init(const InitParams& params) {
     }
     LOGI("gpuId resolved: requested=%d -> rife-ncnn-vulkan gpuid=%d (gpu_count=%d)",
          params.gpuId, resolvedGpuId, ncnn::get_gpu_count());
+    nativeTraceMark("RifeEngine::init: gpuId resolved requested=%d -> gpuid=%d (gpu_count=%d)",
+                     params.gpuId, resolvedGpuId, ncnn::get_gpu_count());
 
     auto* rife = new RIFE(resolvedGpuId, params.ttaSpatial, params.ttaTemporal,
                            params.uhdMode, params.numThreads,
                            /*rife_v2=*/false, /*rife_v4=*/true);
     if (rife->load(params.modelDir.c_str()) != 0) {
         LOGE("Failed to load RIFE model from %s", params.modelDir.c_str());
+        nativeTraceMark("RifeEngine::init: rife->load() FAILED for modelDir=%s", params.modelDir.c_str());
         delete rife;
         return -1;
     }
     backendHandle_ = rife;
     ready_ = true;
     LOGI("RIFE engine ready (gpuid=%d, uhd=%d)", resolvedGpuId, params.uhdMode);
+    nativeTraceMark("RifeEngine::init: ready (gpuid=%d, uhd=%d)", resolvedGpuId, params.uhdMode);
     return 0;
 }
 
@@ -177,7 +246,17 @@ int RifeEngine::interpolate(const uint8_t* frameA, const uint8_t* frameB,
     const int rc = rife->process(matA, matB, timestep, matOut);
     if (rc != 0) {
         LOGE("RIFE::process failed rc=%d", rc);
+        nativeTraceMark("RifeEngine::interpolate: RIFE::process FAILED rc=%d", rc);
         return rc;
+    }
+    // Cheap sanity check alongside matToNv12's value-range check: an empty
+    // or wrong-sized matOut would also read back as a black/garbage frame,
+    // and process() returning rc=0 doesn't guarantee matOut actually got
+    // filled - only that the call didn't hit an internal error path.
+    if (matOut.empty() || matOut.w != width || matOut.h != height) {
+        nativeTraceMark("RifeEngine::interpolate: matOut UNEXPECTED dims w=%d h=%d c=%d dims=%d "
+                         "(expected %dx%d) - encoding it anyway, this is likely the black-frame cause",
+                         matOut.w, matOut.h, matOut.c, matOut.dims, width, height);
     }
     matToNv12(matOut, outFrame, width, height);
     return 0;
