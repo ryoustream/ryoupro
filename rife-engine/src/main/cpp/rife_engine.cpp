@@ -253,10 +253,17 @@ int RifeEngine::interpolate(const uint8_t* frameA, const uint8_t* frameB,
     // or wrong-sized matOut would also read back as a black/garbage frame,
     // and process() returning rc=0 doesn't guarantee matOut actually got
     // filled - only that the call didn't hit an internal error path.
+    // CONFIRMED happening on the reporter's device via native_trace.txt
+    // (matOut w=0 h=0 c=0 every single frame, rc=0). Encoding that anyway
+    // was how it silently became a black-frame video instead of a visible
+    // failure - fail loudly instead now that we know what to look for.
     if (matOut.empty() || matOut.w != width || matOut.h != height) {
         nativeTraceMark("RifeEngine::interpolate: matOut UNEXPECTED dims w=%d h=%d c=%d dims=%d "
-                         "(expected %dx%d) - encoding it anyway, this is likely the black-frame cause",
+                         "(expected %dx%d) - refusing to encode this as a frame",
                          matOut.w, matOut.h, matOut.c, matOut.dims, width, height);
+        LOGE("RIFE::process returned rc=0 but matOut is empty/wrong-sized (w=%d h=%d, expected %dx%d)",
+             matOut.w, matOut.h, width, height);
+        return -4;
     }
     matToNv12(matOut, outFrame, width, height);
     return 0;
