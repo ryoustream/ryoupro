@@ -63,11 +63,29 @@ void nativeTraceMark(const char* fmt, ...) {
 // rife-ncnn-vulkan has shipped a couple of slightly different signatures
 // for RIFE::process() across its v2/v4 branches (v4 added the free
 // `timestep` argument for non-2x factors; older tags hardcode 0.5f).
-// VERIFIED against nihui/rife-ncnn-vulkan HEAD (src/rife.h) on 2026-07-31:
+// VERIFIED against TNTwise/rife-ncnn-vulkan tag 20250112 (src/rife.h) on
+// 2026-08-06:
 //   int process(const ncnn::Mat& in0image, const ncnn::Mat& in1image,
 //               float timestep, ncnn::Mat& outimage) const;
-// matches exactly what's called below - no change needed if
-// setup_native_deps.sh still pins a v4-era tag.
+// matches exactly what's called below - no change needed.
+//
+// Switched vendor from nihui/rife-ncnn-vulkan (no releases since Oct 2022,
+// pinned at a7532fc) to TNTwise/rife-ncnn-vulkan (actively maintained
+// fork, 178 commits and 40 releases past that point) after nihui's build
+// exhibited a device-specific bug: RIFE::process() returned rc=0 on every
+// call but left outimage completely empty (w=0 h=0 c=0) on one reporter's
+// device, every single frame - confirmed via native_trace.txt, not a
+// guess. Notably, this project's ncnn pin (third_party/ncnn) already
+// matched TNTwise's own tested ncnn commit exactly (b4ba207) despite being
+// paired with nihui's 2022-era code - i.e. this project was already
+// running an ncnn newer than what nihui's vendored code was ever tested
+// against. That mismatch is a plausible root cause on its own; this
+// switch fixes both at once by moving to the combination TNTwise actually
+// builds and tests together.
+//
+// RIFE class constructor also gained a trailing `int padding = 32`
+// parameter somewhere in that gap (default-compatible with the call
+// below, which doesn't pass it explicitly).
 #include "rife.h"
 #include "mat.h"
 #include "gpu.h"

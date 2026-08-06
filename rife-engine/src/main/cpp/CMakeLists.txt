@@ -12,7 +12,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # README next to this file):
 #
 #   third_party/ncnn/                <- Tencent/ncnn, BSD-3-Clause
-#   third_party/rife-ncnn-vulkan/     <- nihui/rife-ncnn-vulkan, MIT
+#   third_party/rife-ncnn-vulkan/     <- TNTwise/rife-ncnn-vulkan (active fork of nihui's, MIT)
 #
 # Both are pulled in as git submodules so their own CMake build files are
 # reused as-is instead of being re-implemented here.

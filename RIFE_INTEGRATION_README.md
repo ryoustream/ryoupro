@@ -69,7 +69,7 @@ Everything pulled in is MIT or BSD-3-Clause and compatible with
 Nokvez Play's own MIT license:
 
 - RIFE (hzwer/Practical-RIFE) - MIT
-- rife-ncnn-vulkan (nihui) - MIT
+- rife-ncnn-vulkan (TNTwise fork of nihui's, actively maintained) - MIT
 - ncnn (Tencent) - BSD-3-Clause
 
 Add a NOTICE entry crediting these three before shipping a release build

@@ -13,14 +13,17 @@ cd rife-engine/src/main/cpp
 
 This clones:
 - `Tencent/ncnn` (BSD-3-Clause) into `third_party/ncnn`
-- `nihui/rife-ncnn-vulkan` (MIT) into `third_party/rife-ncnn-vulkan`
+- `TNTwise/rife-ncnn-vulkan` (MIT, active fork of nihui/rife-ncnn-vulkan -
+  the original has had no releases since 2022; TNTwise's fork is the
+  actively maintained one and is what `.gitmodules` actually pins) into
+  `third_party/rife-ncnn-vulkan`
 
 Then, manually:
 1. Confirm `RIFE::process()`'s signature in the vendored `rife.h` matches
    `rife_engine.cpp`'s assumption (this scaffold targets the v4.x API,
    which added a free `timestep` argument vs. the older hardcoded-0.5 v2 API).
 2. Download a RIFE model (e.g. `rife-v4.6`) from the
-   [rife-ncnn-vulkan releases page](https://github.com/nihui/rife-ncnn-vulkan/releases)
+   [rife-ncnn-vulkan releases page](https://github.com/TNTwise/rife-ncnn-vulkan/releases)
    and place it under `app/src/main/assets/rife_models/<name>/` - see
    `RifeModel.kt` for the expected folder naming.
 
