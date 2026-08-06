@@ -85,7 +85,7 @@ class RifeExportWorker(appContext: android.content.Context, params: WorkerParame
         // of backend (CPU would fail the same way). One test run answers
         // which side of that this is on.
         val config = RifeConfig(scale = scale, gpuId = -2)
-        NativeTrace.mark(applicationContext, "runExport: DIAGNOSTIC BUILD - gpuId forced to -2 (CPU) " +
+        com.rynime.nvplayer.rife.NativeTrace.mark(applicationContext, "runExport: DIAGNOSTIC BUILD - gpuId forced to -2 (CPU) " +
             "to isolate the empty-matOut bug from Vulkan/GPU driver - revert after this test")
         val interpolator = RifeInterpolator.create(applicationContext, config, width, height)
             ?: throw IllegalStateException(
