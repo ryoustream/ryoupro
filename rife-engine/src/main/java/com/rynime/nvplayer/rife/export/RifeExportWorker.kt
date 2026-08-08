@@ -10,8 +10,6 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import com.rynime.nvplayer.rife.RifeConfig
-import com.rynime.nvplayer.rife.RifeInterpolator
 import com.rynime.nvplayer.rife.RifeScale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -23,12 +21,15 @@ private const val CODEC_TIMEOUT_US = 10_000L
 /**
  * Batch/export interpolation ("Mode A" from the phased plan). Runs entirely
  * on android.media (MediaExtractor/MediaCodec/MediaMuxer) - the only RIFE-
- * specific dependency is [RifeInterpolator]. This is intentionally decoupled
- * from mpv/MPVPlayerEngine entirely: it operates on the source file directly,
- * independent of whatever is or isn't currently playing.
+ * specific dependency is [com.rynime.nvplayer.rife.tflite.RifeTfliteInterpolator]
+ * (TESTING: TFLite/Option B backend, in place of the native ncnn/Vulkan
+ * RifeInterpolator - see RifeTfliteInterpolator's class doc for why).
+ * This is intentionally decoupled from mpv/MPVPlayerEngine entirely: it
+ * operates on the source file directly, independent of whatever is or
+ * isn't currently playing.
  *
  * Per AGENTS.md: heavy work stays off the main thread (withContext(Dispatchers.IO)
- * / Dispatchers.Default via RifeInterpolator itself), no `!!`, everything
+ * / Dispatchers.Default via the interpolator itself), no `!!`, everything
  * that can fail is wrapped and reported as a failed Result rather than left
  * to crash - a long export job crashing the whole app on a malformed frame
  * would be a much worse experience than a caught, reported failure.
@@ -75,12 +76,17 @@ class RifeExportWorker(appContext: android.content.Context, params: WorkerParame
         } else 0
 
         val scale = RifeScale.entries.first { it.factor == scaleFactor }
-        val config = RifeConfig(scale = scale)
-        val interpolator = RifeInterpolator.create(applicationContext, config, width, height)
-            ?: throw IllegalStateException(
-                "RIFE engine unavailable (${config.model.displayName}) - check RifeCapabilityProbe / model assets"
-            )
-        com.rynime.nvplayer.rife.NativeTrace.mark(applicationContext, "runExport: RifeInterpolator.create succeeded, entering decode/encode setup")
+        // TESTING Option B (TFLite backend) in place of the native ncnn
+        // RifeInterpolator - see RifeTfliteInterpolator's class doc for
+        // why. The converted model only supports the fixed t=0.5 / 2x
+        // case it was traced for, matching RifeScale.X2; anything else
+        // isn't supported by this backend yet.
+        require(scale == RifeScale.X2) {
+            "TFLite backend (Option B, testing) only supports RifeScale.X2 for now, got $scale"
+        }
+        val interpolator = com.rynime.nvplayer.rife.tflite.RifeTfliteInterpolator.create(applicationContext)
+            ?: throw IllegalStateException("TFLite RIFE engine unavailable - check flownet.tflite asset / logcat")
+        com.rynime.nvplayer.rife.NativeTrace.mark(applicationContext, "runExport: RifeTfliteInterpolator.create succeeded, entering decode/encode setup")
 
         val mime = requireNotNull(videoFormat.getString(MediaFormat.KEY_MIME)) { "Video track missing MIME type" }
         val decoder = MediaCodec.createDecoderByType(mime)
@@ -115,6 +121,8 @@ class RifeExportWorker(appContext: android.content.Context, params: WorkerParame
                 scale = scale,
                 sourceFrameRate = sourceFrameRate,
                 estimatedFrameCount = estimatedFrameCount,
+                width = width,
+                height = height,
             )
             extractor.unselectTrack(videoTrackIndex)
 
@@ -152,10 +160,12 @@ class RifeExportWorker(appContext: android.content.Context, params: WorkerParame
         decoder: MediaCodec,
         encoder: MediaCodec,
         muxer: MediaMuxer,
-        interpolator: RifeInterpolator,
+        interpolator: com.rynime.nvplayer.rife.tflite.RifeTfliteInterpolator,
         scale: RifeScale,
         sourceFrameRate: Int,
         estimatedFrameCount: Int,
+        width: Int,
+        height: Int,
     ) {
         val bufferInfo = MediaCodec.BufferInfo() // decoder dequeue only
         val encoderBufferInfo = MediaCodec.BufferInfo() // encoder drain only - MUST be separate,
@@ -206,7 +216,7 @@ class RifeExportWorker(appContext: android.content.Context, params: WorkerParame
                             // caused the audio track's duration to read as ~54 hours and the
                             // claimed vs. actually-decodable frame count mismatch).
                             for (t in scale.timesteps()) {
-                                val interpolated = interpolator.interpolate(prev, currentFrame, t)
+                                val interpolated = interpolator.interpolate(prev, currentFrame, width, height)
                                 val ptsUs = previousPtsUs + ((currentPtsUs - previousPtsUs) * t).toLong()
                                 feedEncoder(encoder, interpolated, ptsUs, endOfStream = false)
                                 drainEncoder(encoder, muxer, encoderBufferInfo, muxerState)

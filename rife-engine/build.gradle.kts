@@ -56,6 +56,14 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.10.0")
     implementation(project.dependencies.platform("org.jetbrains.kotlinx:kotlinx-coroutines-bom:1.9.0"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android")
+    // Option B backend (RifeTfliteInterpolator): classic Interpreter API,
+    // not the newer CompiledModel API - resizeInput()-based dynamic shape
+    // support is long-established and documented here, whereas
+    // CompiledModel's dynamic-shape behavior isn't (this backend needs
+    // per-video padded resolutions, not a fixed shape baked in at
+    // conversion time). NNAPI delegate intentionally not added - see
+    // RifeTfliteInterpolator's class doc for why.
+    implementation("org.tensorflow:tensorflow-lite:2.17.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
